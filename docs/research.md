@@ -20,7 +20,7 @@ Research date: 2026-10-03. This repository is an original implementation. Refere
 | Ralph Loop           | Simple persistent repetition through a stop hook                                 | Completion promises are assistant-emitted text; an iteration cap is a separate termination condition | No completion promises; no default iteration cap; stop is separate from success    |
 | Ralph Orchestrator   | Quality gates and reviewer roles can reject unfinished work                      | More coordination roles do not by themselves prove the underlying evidence                           | Keep verification authority in a small host engine; optional review can only veto  |
 | Aider test feedback  | Executes concrete lint/test commands and feeds failures back                     | Passing configured checks is narrower than proving a broad project objective                         | Use explicit, independently inspectable outcome tests                              |
-| Streaming TPS meters | Immediate feedback during generation                                             | Byte-to-token estimates are approximate; rate windows differ                                         | Report host token counts and clearly label measured request-elapsed rate           |
+| Streaming TPS meters | Immediate feedback during generation                                             | Byte-to-token estimates are approximate; rate windows differ                                         | Use OpenCode 2’s native speed display; retain goal token totals                    |
 
 These are design observations, not measured competitor rankings. The reported premature stopping of the user's previous setup was not reproduced against its exact historical configuration. The current upstream repository already implements substantial verification and regression testing; attributing the issue to “it only trusts done” would be inaccurate.
 
@@ -34,7 +34,7 @@ As of 0.3.0, only OpenCode 2.x is supported. Earlier-generation findings below a
 4. Native 2.x configured local plugins are directories, with server/tui entrypoint discovery. Direct file URLs are rejected there. Master Goal ships root entrypoint wrappers and a version-aware installer.
 5. Native RPC calls need the selected session's server location. The sidebar supplies it explicitly.
 6. Compaction hooks must carry durable task data back into context. A summary alone is not an authoritative contract.
-7. Timings need defined boundaries. Master Goal does not describe request-elapsed throughput as pure decode TPS.
+7. Master Goal delegates throughput display to OpenCode 2 and retains token totals for goal budgets.
 
 ## Deliberate scope
 

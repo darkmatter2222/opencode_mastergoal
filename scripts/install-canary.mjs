@@ -1,5 +1,5 @@
 // Exercises the actual npm pack/exec path with isolated local and global config.
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -16,13 +16,22 @@ const npmScript =
         "node_modules/npm/bin/npm-cli.js",
       )
     : undefined);
-const npm = (args, options = {}) =>
-  exec(
+const npm = (args, options = {}) => {
+  const pending = exec(
     npmScript ? process.execPath : "npm",
     npmScript ? [npmScript, ...args] : args,
     { maxBuffer: 8 * 1024 * 1024, timeout: 180000, ...options },
   );
+  pending.child.stdin.end();
+  pending.child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+  return pending;
+};
 try {
+  // Reproduce OpenCode config directories inside an existing npm project.
+  await writeFile(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "ancestor-project", private: true }),
+  );
   console.log("Packing source distribution...");
   const packed = await npm(
     ["pack", "--ignore-scripts", "--json", "--pack-destination", root],
@@ -91,6 +100,22 @@ try {
       "help",
     ]);
     assert.match(help.stdout, /construct/);
+    if (process.env.OPENCODE_TEST_BINARY && scopeName === "global") {
+      console.log("Loading the installed runtime in real OpenCode 2...");
+      const checked = await exec(
+        process.execPath,
+        [
+          path.join(repo, "scripts/host-canary-v2.mjs"),
+          path.resolve(process.env.OPENCODE_TEST_BINARY),
+        ],
+        {
+          env: { ...env, MASTERGOAL_PACKAGE_ROOT: runtime },
+          timeout: 150000,
+          maxBuffer: 8 * 1024 * 1024,
+        },
+      );
+      console.log(checked.stdout);
+    }
     await exec(
       process.execPath,
       [path.join(runtime, "dist/cli.js"), "uninstall", ...scope],

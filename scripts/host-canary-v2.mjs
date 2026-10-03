@@ -16,6 +16,7 @@ const state = path.join(root, "goal-state");
 const env = {
   ...process.env,
   MASTERGOAL_STATE_DIR: state,
+  OPENCODE_CONFIG_DIR: path.join(root, "config", "opencode"),
   XDG_CONFIG_HOME: root + "/config",
   XDG_DATA_HOME: root + "/data",
   XDG_CACHE_HOME: root + "/cache",
@@ -103,7 +104,11 @@ const api = async (method, p, data) => {
 try {
   const config = {
     plugins: [
-      pathToFileURL(fileURLToPath(new URL("../", import.meta.url))).href,
+      pathToFileURL(
+        process.env.MASTERGOAL_PACKAGE_ROOT
+          ? path.resolve(process.env.MASTERGOAL_PACKAGE_ROOT)
+          : fileURLToPath(new URL("../", import.meta.url)),
+      ).href,
     ],
     model: "canary/fake",
     providers: {

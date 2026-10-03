@@ -8,7 +8,7 @@ Executed 2026-10-03 on Linux x64, Node.js 24.19.0. This records observed results
 | Automated tests         | 106 passed, 0 failed                                                                                                                                                      |
 | Deterministic corpus    | 20/20 scenarios passed                                                                                                                                                    |
 | Real OpenCode 2.0.22    | Command loaded; construct reached model; 3 run fake-model requests; 3 verifications; completion only after artifact passed; 30 output tokens accounted; status RPC passed |
-| Native sidebar render   | OpenTUI test renderer at 42×18; status/progress/TPS visible; remote session location passed to RPC                                                                        |
+| Native sidebar render   | OpenTUI test renderer at 42×18; status/progress/token totals visible; remote session location passed to RPC                                                               |
 | npm package assembly    | Packaged npm exec install/uninstall passed for local and global OpenCode 2 configurations; durable runtime CLI passed                                                     |
 
 ## Reproduce

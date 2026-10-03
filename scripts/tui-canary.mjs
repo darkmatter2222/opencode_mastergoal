@@ -11,7 +11,7 @@ const cleanup = sidebar.setup({
         assert.equal(options.location.directory, "/remote/project");
         calls++;
         return {
-          text: "MASTER GOAL · ACTIVE\nIndependent verification\nChecks: 1/3 (33% checks)\nIterations: 6 · Turns: 9\nTokens: 12,345\nOutput/s: 42.0 (request elapsed)\nCost: $0.0234\nDeterministic checks remain unmet",
+          text: "MASTER GOAL · ACTIVE\nIndependent verification\nChecks: 1/3 (33% checks)\nIterations: 6 · Turns: 9\nTokens: 12,345\nCost: $0.0234\nDeterministic checks remain unmet",
         };
       },
     }),

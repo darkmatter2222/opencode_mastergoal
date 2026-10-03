@@ -254,12 +254,12 @@ test("corrupt state fails closed", async (t) => {
   await writeFile(path.join(f.engine.store("s").directory, "state.json"), "{");
   await assert.rejects(f.engine.verify("s"));
 });
-test("status labels progress and rate honestly", async (t) => {
+test("status shows progress without a duplicate TPS counter", async (t) => {
   const f = await fixture(t);
   await f.engine.start("s");
   assert.match(formatStatus(await f.engine.store("s").read()), /0% checks/);
-  assert.match(
+  assert.doesNotMatch(
     formatStatus(await f.engine.store("s").read()),
-    /request elapsed/,
+    /Output\/s|TPS|request elapsed/,
   );
 });

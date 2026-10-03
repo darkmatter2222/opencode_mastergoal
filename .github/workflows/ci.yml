@@ -53,3 +53,11 @@ jobs:
       - run: npm install --prefix .host-v2 @opencode/cli@2.0.22
       - run: ./.host-v2/node_modules/@opencode/cli/bin/opencode.exe --version
       - run: npm run test:install
+        env:
+          OPENCODE_TEST_BINARY: ${{ github.workspace }}/.host-v2/node_modules/@opencode/cli/bin/opencode.exe
+      - name: Show npm diagnostics on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          $logRoot = Join-Path (npm config get cache) '_logs'
+          Get-ChildItem $logRoot -Filter '*.log' | Sort-Object LastWriteTime | Select-Object -Last 4 | ForEach-Object { Write-Output $_.Name; Get-Content $_.FullName -Tail 60 }

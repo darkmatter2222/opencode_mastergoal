@@ -291,10 +291,6 @@ export function formatStatus(s: State | undefined): string {
   if (!s) return "MASTER GOAL\nNo goal. /goal init";
   const passed = s.results.filter((r) => r.passed).length,
     total = s.goal.contract.checks.length;
-  const tps =
-    s.usage.durationMs > 0
-      ? (s.usage.output / (s.usage.durationMs / 1000)).toFixed(1)
-      : "n/a";
   return [
     `MASTER GOAL · ${s.status.toUpperCase()}`,
     s.goal.contract.title,
@@ -304,7 +300,6 @@ export function formatStatus(s: State | undefined): string {
     `Tokens: ${totalTokens(s).toLocaleString()}`,
     `In ${s.usage.input} · Out ${s.usage.output} · Reason ${s.usage.reasoning}`,
     `Cache R ${s.usage.cacheRead} / W ${s.usage.cacheWrite}`,
-    `Output/s: ${tps} (request elapsed)`,
     `Cost: $${s.usage.cost.toFixed(4)}`,
     `Review: ${s.review ? (s.review.passed ? "passed" : "veto") : "n/a"}`,
     s.reason,

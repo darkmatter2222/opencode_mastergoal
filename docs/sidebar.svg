@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="470" viewBox="0 0 560 470" role="img" aria-labelledby="title desc">
-<title id="title">Master Goal right sidebar preview</title><desc id="desc">Sample active goal showing deterministic checks, tokens, output speed, cost, and todos.</desc>
+<title id="title">Master Goal right sidebar preview</title><desc id="desc">Sample active goal showing deterministic checks, tokens, cost, and todos.</desc>
 <rect width="560" height="470" rx="14" fill="#10151d"/>
 <rect x="18" y="18" width="524" height="434" rx="10" fill="#18212c" stroke="#344357"/>
 <g font-family="ui-monospace, monospace" font-size="16" fill="#dce6f2">
@@ -11,7 +11,7 @@
 <text x="40" y="219">Tokens: 12,345</text>
 <text x="40" y="249">In 9000 · Out 2345 · Reason 1000</text>
 <text x="40" y="279">Cache R 0 / W 0</text>
-<text x="40" y="309">Output/s: 42.0 (request elapsed)</text>
+<text x="40" y="309">Review: n/a</text>
 <text x="40" y="339">Cost: $0.0234</text>
 <text x="40" y="379" fill="#f4c97a">Deterministic checks remain unmet</text>
 <text x="40" y="417">○ Verify release artifacts</text>

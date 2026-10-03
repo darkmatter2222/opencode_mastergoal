@@ -184,10 +184,9 @@ Copy and customize the script before starting. Review is probabilistic and susce
 
 Illustrative layout with sample values; terminal width and theme affect wrapping. The plugin appends this panel to OpenCode’s existing right sidebar.
 
-The sidebar shows run state, mode, checked criteria, verification iterations, assistant turns/steps, input/output/reasoning tokens, cache reads/writes, host-reported cost, output tokens per second, review verdict, and available native todos.
+The sidebar shows run state, mode, checked criteria, verification iterations, assistant turns/steps, input/output/reasoning tokens, cache reads/writes, host-reported cost, review verdict, and available native todos.
 
 - **Check percentage** means passing checks / total checks. It is not a prediction of time remaining or overall task completion.
-- **Output/s** is provider-reported output tokens divided by measured request elapsed time. It includes request overhead. It is not raw GPU decode speed and is updated at completed message/step boundaries.
 - **Turns** count completed provider steps. They are not user-message counts.
 - **Cost** comes from the host. Zero can mean the provider did not supply pricing.
 - Usage is scoped to the bound session after goal start. Child-agent sessions and optional external reviewer usage are not included.

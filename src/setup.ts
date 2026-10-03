@@ -1,4 +1,12 @@
-import { mkdtemp, mkdir, rm, cp, readFile, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  rm,
+  cp,
+  readFile,
+  writeFile,
+  stat,
+} from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,21 +79,26 @@ export async function setup(root: string, remove = false) {
     exec(
       npmScript ? process.execPath : "npm",
       npmScript ? [npmScript, ...args] : args,
-      { cwd, maxBuffer: 4 * 1024 * 1024 },
+      { cwd, maxBuffer: 4 * 1024 * 1024, timeout: 120000 },
     );
   try {
     const source = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+    console.error("Master Goal: preparing compiled runtime...");
     const staged = path.join(temp, "package");
     await stageRuntime(source, staged);
+    console.error("Master Goal: packing runtime...");
     const packed = await runNpm(
       ["pack", "--ignore-scripts", "--json", "--pack-destination", temp],
       staged,
     );
     const filename = JSON.parse(packed.stdout)[0].filename as string;
     await mkdir(managed, { recursive: true });
+    console.error("Master Goal: installing runtime dependencies...");
     await runNpm(
       [
         "install",
+        "--prefix",
+        managed,
         "--omit=dev",
         "--ignore-scripts",
         "--no-audit",
@@ -94,6 +107,13 @@ export async function setup(root: string, remove = false) {
       ],
       managed,
     );
+    for (const entry of ["package.json", "dist/server.js", "dist/tui.js"]) {
+      if (!(await stat(path.join(packageRoot, entry))).isFile())
+        throw new Error(
+          `Installed runtime is missing ${entry}; configuration was not changed.`,
+        );
+    }
+    console.error("Master Goal: registering OpenCode 2 plugin...");
     return await install(root, false, packageRoot);
   } finally {
     await rm(temp, { recursive: true, force: true });
