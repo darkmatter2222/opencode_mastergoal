@@ -5,7 +5,7 @@ import path from "node:path";
 import { command, initGoal } from "../dist/commands.js";
 import { install } from "../dist/install.js";
 import { parseGoal } from "../dist/contract.js";
-import { fixture } from "./helpers.mjs";
+import { fixture, contract } from "./helpers.mjs";
 test("init refuses to overwrite existing goal", async (t) => {
   const f = await fixture(t);
   await assert.rejects(initGoal(f.root));
@@ -186,4 +186,38 @@ test("CLI rejects the retired host before changing configuration", async () => {
     main(["install", "--host", "1", "--global"]),
     /requires OpenCode 2/,
   );
+});
+
+test("forever command overrides a verified artifact check that passes immediately", async (t) => {
+  const f = await fixture(
+    t,
+    contract({
+      checks: [
+        {
+          id: "artifacts",
+          type: "script",
+          runtime: process.execPath,
+          path: "goal.verify.mjs",
+        },
+      ],
+    }),
+  );
+  await f.write(
+    "goal.verify.mjs",
+    "console.log('PASS: existing artifacts valid'); process.exitCode = 0;",
+  );
+  await command(f.engine, "s", "forever goal.md");
+  for (let i = 0; i < 3; i++) {
+    await command(f.engine, "s", "check");
+    const state = await f.engine.store("s").read();
+    assert.equal(state.results[0].passed, true);
+    assert.equal(state.status, "active");
+    assert.equal(state.goal.contract.mode, "forever");
+  }
+  assert.match(
+    (await command(f.engine, "s", "status")).text,
+    /Completion disabled/,
+  );
+  await command(f.engine, "s", "stop");
+  assert.equal((await f.engine.store("s").read()).status, "stopped");
 });

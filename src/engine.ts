@@ -295,7 +295,9 @@ export function formatStatus(s: State | undefined): string {
     `MASTER GOAL · ${s.status.toUpperCase()}`,
     s.goal.contract.title,
     `Mode: ${s.goal.contract.mode}`,
-    `Checks: ${passed}/${total} (${total ? Math.floor((passed / total) * 100) : 0}% checks)`,
+    s.goal.contract.mode === "forever"
+      ? `Health checks: ${passed}/${total} · Completion disabled`
+      : `Checks: ${passed}/${total} (${total ? Math.floor((passed / total) * 100) : 0}% checks)`,
     `Iterations: ${s.iterations} · Turns: ${s.turns}`,
     `Tokens: ${totalTokens(s).toLocaleString()}`,
     `In ${s.usage.input} · Out ${s.usage.output} · Reason ${s.usage.reasoning}`,
