@@ -2,8 +2,15 @@ import { readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { applyEdits, modify, parse, type ParseError } from "jsonc-parser";
-export async function install(root: string, host: 1 | 2, remove = false) {
-  const dist = path.dirname(fileURLToPath(import.meta.url));
+export async function install(
+  root: string,
+  host: 1 | 2,
+  remove = false,
+  packageRoot?: string,
+) {
+  const dist = packageRoot
+    ? path.join(packageRoot, "dist")
+    : path.dirname(fileURLToPath(import.meta.url));
   const entries = [
     {
       name: "opencode",

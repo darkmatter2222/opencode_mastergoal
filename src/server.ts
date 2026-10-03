@@ -1,3 +1,4 @@
+import { constructionContext } from "./construct.js";
 import { Plugin } from "@opencode/plugin";
 import { realpath } from "node:fs/promises";
 import { Engine, formatStatus } from "./engine.js";
@@ -84,6 +85,13 @@ export default Plugin.define({
               text: result.text,
               resume: false,
             });
+            if (result.construction)
+              await ctx.session.prompt({
+                sessionID: input.sessionID,
+                text: result.construction,
+                delivery: "queue",
+                resume: true,
+              });
             if (result.kick) scheduler.schedule(input.sessionID, 250);
           },
         }),
@@ -103,7 +111,9 @@ export default Plugin.define({
       system: { type: "text"; text: string }[];
     }) => {
       const { engine } = await get(e.sessionID);
-      const text = await engine.context(e.sessionID);
+      const text =
+        (await constructionContext(engine, e.sessionID)) ||
+        (await engine.context(e.sessionID));
       if (text) e.system.push({ type: "text", text });
     };
     registrations.push(await ctx.session.hook("context", inject));

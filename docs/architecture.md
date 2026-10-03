@@ -60,3 +60,9 @@ For untrusted agents, enforce boundaries outside this plugin: read-only verifier
 Host-reported input/output/reasoning/cache token fields are aggregated once per message/step identity. Cumulative updates increase counts without double-counting or subtracting prior usage. The ledger deliberately retains every identity during the run; this trades growing state size for exact replay protection. Very large indefinite runs should be rotated deliberately if state serialization becomes expensive. Last 200 lifecycle/usage entries remain in the human-readable history.
 
 The sidebar is read-only. It never alters host todos to create a cosmetic success percentage. Check coverage is separate from native planning. The 2.x sidebar uses RPC so it does not read a misleading client-local file when attached to a remote server.
+
+## Construction phase
+
+`/goal construct` is an explicitly requested preparation turn using the host's current model and tools. It accepts ordinary Markdown without a pre-existing contract. The original document and construction instructions are saved outside the project in session state and reinjected during context creation and compaction. No active, paused, or blocked run may enter construction; stop that run first. Successful start clears the construction context and pins the generated contract through the normal engine. Construction itself cannot mark a goal complete.
+
+The model edits draft files through OpenCode's ordinary tools and permission system. This phase is intentionally distinct from the locked verification loop: it may ask questions or need another turn. Generated acceptance criteria require inspection; neither the parser nor a model can establish semantic equivalence between arbitrary prose and executable checks. Optional reviewer scripts still require their own configured service and may only veto deterministic success.

@@ -23,12 +23,14 @@ const env = {
   OPENCODE_DISABLE_MODELS_FETCH: "true",
 };
 const exec = promisify(execFile);
+let constructionCalls = 0;
 let calls = 0;
 const server = createServer(async (req, res) => {
   let body = "";
   for await (const chunk of req) body += chunk;
   const data = JSON.parse(body);
-  calls++;
+  if (body.includes("MASTER GOAL CONSTRUCTION")) constructionCalls++;
+  else calls++;
   if (calls >= 3) await writeFile(root + "/accepted.txt", "verified");
   const base = {
     id: "fake-" + calls,
@@ -161,6 +163,23 @@ try {
     commands.data.some((c) => c.name === "goal"),
     "goal registered: " + JSON.stringify(commands),
   );
+  const draftCreated = await api("POST", "/api/session", {
+    title: "Construction canary",
+    location: { directory: root },
+    model: { providerID: "canary", id: "fake" },
+  });
+  const drafting = draftCreated.data ?? draftCreated;
+  await api("POST", `/api/session/${drafting.id}/command`, {
+    name: "goal",
+    text: "construct",
+  });
+  const constructDeadline = Date.now() + 45000;
+  while (!constructionCalls && Date.now() < constructDeadline)
+    await new Promise((r) => setTimeout(r, 100));
+  assert(
+    constructionCalls > 0,
+    "construction instructions reached the host model",
+  );
   const created = await api("POST", "/api/session", {
     title: "Master Goal canary",
     location: { directory: root },
@@ -195,6 +214,7 @@ try {
       {
         host: "2.0.22",
         registered: true,
+        constructionDispatched: constructionCalls > 0,
         status: result.status,
         modelRequests: calls,
         iterations: result.iterations,

@@ -4,3 +4,5 @@ dist/
 .mastergoal/
 benchmarks/latest.json
 .host-*/
+
+.mastergoal-runtime/

@@ -12,6 +12,7 @@ const root = await realpath(
   await mkdtemp(path.join(tmpdir(), "mastergoal-host-v1-")),
 );
 const state = path.join(root, "state");
+let constructionCalls = 0;
 let calls = 0,
   log = "";
 let child;
@@ -19,7 +20,8 @@ const provider = createServer(async (req, res) => {
   let body = "";
   for await (const chunk of req) body += chunk;
   const input = JSON.parse(body);
-  calls++;
+  if (body.includes("MASTER GOAL CONSTRUCTION")) constructionCalls++;
+  else calls++;
   if (calls >= 3) await writeFile(path.join(root, "accepted.txt"), "verified");
   if (input.stream) {
     res.writeHead(200, { "content-type": "text/event-stream" });
@@ -142,6 +144,16 @@ try {
     commands.some((c) => c.name === "goal"),
     "goal command registered",
   );
+  const drafting = await api("/session", { title: "Construction canary" });
+  await api(`/session/${drafting.id}/command`, {
+    command: "goal",
+    arguments: "construct",
+    model: "canary/fake",
+  });
+  assert(
+    constructionCalls > 0,
+    "construction instructions reached the host model",
+  );
   const session = await api("/session", { title: "Master Goal canary" });
   const req = api(`/session/${session.id}/command`, {
     command: "goal",
@@ -163,6 +175,7 @@ try {
       {
         host: "1.18.34",
         registered: true,
+        constructionDispatched: constructionCalls > 0,
         status: result.status,
         modelRequests: calls,
         iterations: result.iterations,

@@ -1,3 +1,4 @@
+import { constructionContext } from "./construct.js";
 import { type Plugin, tool } from "@opencode-ai/plugin";
 import { realpath } from "node:fs/promises";
 import { Engine, formatStatus } from "./engine.js";
@@ -59,7 +60,7 @@ const plugin: Plugin = async ({ client, directory }) => {
       output.parts = [
         {
           type: "text",
-          text: `Host command result:\n${result.text}\n${result.kick ? await engine.context(input.sessionID) : "Report this status briefly; do not perform goal work."}`,
+          text: `Host command result:\n${result.text}\n${result.construction ? result.construction : result.kick ? await engine.context(input.sessionID) : "Report this status briefly; do not perform goal work."}`,
         } as (typeof output.parts)[number],
       ];
       await notify(input.sessionID, result.text);
@@ -67,12 +68,16 @@ const plugin: Plugin = async ({ client, directory }) => {
     "experimental.chat.system.transform": async (input, output) => {
       if (input.sessionID) {
         await ensure(input.sessionID);
-        const context = await engine.context(input.sessionID);
+        const context =
+          (await constructionContext(engine, input.sessionID)) ||
+          (await engine.context(input.sessionID));
         if (context) output.system.push(context);
       }
     },
     "experimental.session.compacting": async (input, output) => {
-      const context = await engine.context(input.sessionID);
+      const context =
+        (await constructionContext(engine, input.sessionID)) ||
+        (await engine.context(input.sessionID));
       if (context) output.context.push(context);
     },
     "tool.execute.before": async (input, output) =>

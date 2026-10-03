@@ -38,3 +38,4 @@ jobs:
       - run: node scripts/host-canary-v1.mjs "$PWD/.host-v1/node_modules/.bin/opencode"
       - run: node scripts/host-canary-v2.mjs "$PWD/.host-v2/node_modules/.bin/opencode"
       - run: BUN_BE_BUN=1 .host-v2/node_modules/.bin/opencode --conditions=browser scripts/tui-canary.mjs
+      - run: node scripts/install-canary.mjs

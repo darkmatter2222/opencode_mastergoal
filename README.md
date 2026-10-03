@@ -8,29 +8,40 @@ A run locks a `goal.md` contract and the verifier scripts it references. Every d
 
 Explicit **forever mode** has no success transition and no default iteration, token, cost, or elapsed-time cap. `/goal stop` or `/goal end` stops it. Host shutdown, permission waits, errors, and unavailable providers can interrupt execution; none count as success.
 
-## Install from this repository
+## Quick install
 
-Requires Node.js 22+ for the CLI/check runner. The TUI runs inside OpenCode's Bun runtime. Tested host versions and evidence are in [validation](docs/validation.md).
+Requires Node.js 22+, npm, Git, and OpenCode. Run `opencode --version` to choose `--host 1` or `--host 2`.
+
+Install globally for all your OpenCode projects:
+
+```sh
+npx --yes --package=github:darkmatter2222/opencode_mastergoal mastergoal install --host 2 --global
+```
+
+Or install only in the current project (run this from that project or sub-repository):
+
+```sh
+npx --yes --package=github:darkmatter2222/opencode_mastergoal mastergoal install --host 2 --local
+```
+
+**Use `--host 1` for OpenCode 1.x.** You can append a project directory after `--local`; quote paths containing spaces. Fully restart OpenCode after installing or updating. This installs directly from GitHub; an npm registry release is not required, and this package is not yet published there. Initial installation builds the package and downloads dependencies.
+
+Global configuration uses `OPENCODE_CONFIG_DIR`, otherwise `$XDG_CONFIG_HOME/opencode`, otherwise `~/.config/opencode`. Project installation writes `opencode.json[c]` and `tui.json[c]` at the selected project root. Both preserve JSONC comments and unrelated settings, back up changed configuration, and install a durable runtime in `.mastergoal-runtime` alongside it. Add that directory to your project's `.gitignore`. Clearing the npx cache does not remove your installed plugin.
+
+Repeat the install command to update. To unregister, use the same command with `uninstall` instead of `install`, keeping the same host and scope. Uninstall preserves goals, runtime files and run history; you may remove `.mastergoal-runtime` after unregistering it. Choose one scope per project to avoid loading the plugin twice.
+
+**Disable other plugins that own `/goal` or automatically inject continuation prompts in this session.** One scheduler should own the run. Do not load both Master Goal server adapters together.
+
+For development:
 
 ```sh
 git clone https://github.com/darkmatter2222/opencode_mastergoal.git
 cd opencode_mastergoal
 npm ci
-npm run build
-node dist/cli.js install --host 1 /absolute/path/to/your/project
+node dist/cli.js install --host 2 --local /absolute/path/to/project --link
 ```
 
-Use `--host 2` for OpenCode 2.x. On Windows, quote paths such as `"C:\Users\Ryan\projects\my-app"`. Installation adds local plugin references to the target project's configuration, preserves JSONC comments and existing settings, and backs up changed config files. Keep this checkout in place. Fully restart OpenCode afterward.
-
-**Disable other plugins that own `/goal` or automatically inject continuation prompts in this session.** One scheduler should own the run. Do not load both Master Goal server adapters together.
-
-This package is **not published to npm yet**. The source installation above works without an npm release. To update: `git pull`, `npm ci`, `npm run build`, then restart OpenCode. To unregister it:
-
-```sh
-node dist/cli.js uninstall --host 1 /absolute/path/to/your/project
-```
-
-Uninstall preserves goals, verifier scripts, and run history. For remote OpenCode 2 servers, install the server package on the server and configure the TUI package on the client; its sidebar reads state through RPC. The 1.x sidebar supports local client/server use only.
+`--link` registers this checkout directly; keep it in place and use `--link` for uninstall too. For remote OpenCode 2 servers, install on the server and configure the TUI package on the client; the sidebar reads state through RPC. The 1.x sidebar supports local client/server use only. Tested host versions and evidence are in [validation](docs/validation.md).
 
 ## First goal
 
@@ -40,7 +51,21 @@ In OpenCode:
 /goal init
 ```
 
-This creates `goal.md` and `goal.verify.mjs` without overwriting existing files. Edit both before starting. The generated verifier deliberately fails until implemented. You can ask an agent to draft the contract, but review it before `/goal start`; starting is the action that locks it.
+This creates `goal.md` and a deliberately failing `goal.verify.mjs` placeholder without overwriting existing files. **You only need to write your natural-language objective in `goal.md`. You do not have to code the verifier.** You can keep the template sections or replace the document with plain Markdown.
+
+Then run:
+
+```text
+/goal construct
+```
+
+OpenCode's current model inspects the project and drafts the acceptance contract and executable verifier using its normal tools and permissions. It checks the baseline, tests incorrect cases, and explains coverage and any missing configuration. Construction instructions persist across compaction. This is a preparation turn, not an autonomous goal run: if the model stops with incomplete construction, ask it to continue or run `/goal construct` again. No success is inferred from its reply.
+
+Inspect the proposed criteria, then run `/goal start`. Starting validates the contract and locks its bytes and verifier dependencies; construction never starts a run automatically. To change a live goal, `/goal stop` first. Custom paths work with all three commands, for example `/goal init goals/release.md` (create the parent directory first), `/goal construct goals/release.md`, `/goal start goals/release.md`.
+
+Deterministic checks are mandatory. When subjective criteria require model review, construction can also draft a separate reviewer script. It must use an available configured review service; missing credentials/configuration leave verification failing and are reported to you. Review can veto success but cannot bypass deterministic checks. Generated checks are drafts of your intent, not a mathematical guarantee that every natural-language requirement has been captured.
+
+For example, construction might produce this contract and verifier:
 
 ````markdown
 # Implement addition
@@ -86,18 +111,19 @@ The plugin executes checks itself when the host finishes working. Failing eviden
 
 ## Commands
 
-| Command                     | Behavior                                                      |
-| --------------------------- | ------------------------------------------------------------- |
-| `/goal init [path]`         | Create the Markdown and script templates; default `goal.md`   |
-| `/goal start [path]`        | Validate and lock a new goal; custom paths can contain spaces |
-| `/goal forever [path]`      | Lock a goal with completion disabled                          |
-| `/goal status`              | Show verified progress and usage                              |
-| `/goal inspect`             | Show the full contract, evidence, and recent history          |
-| `/goal check`               | Run a fresh verification on an active goal                    |
-| `/goal pause`               | Pause automatic continuation                                  |
-| `/goal resume`              | Resume the existing paused or blocked contract                |
-| `/goal stop` or `/goal end` | Stop the run without claiming success                         |
-| `/goal help`                | Show command help                                             |
+| Command                     | Behavior                                                            |
+| --------------------------- | ------------------------------------------------------------------- |
+| `/goal init [path]`         | Create the Markdown and script templates; default `goal.md`         |
+| `/goal construct [path]`    | Ask OpenCode to build the contract and verifier from your objective |
+| `/goal start [path]`        | Validate and lock a new goal; custom paths can contain spaces       |
+| `/goal forever [path]`      | Lock a goal with completion disabled                                |
+| `/goal status`              | Show verified progress and usage                                    |
+| `/goal inspect`             | Show the full contract, evidence, and recent history                |
+| `/goal check`               | Run a fresh verification on an active goal                          |
+| `/goal pause`               | Pause automatic continuation                                        |
+| `/goal resume`              | Resume the existing paused or blocked contract                      |
+| `/goal stop` or `/goal end` | Stop the run without claiming success                               |
+| `/goal help`                | Show command help                                                   |
 
 Changing the goal or a pinned verifier during a run blocks verification. To revise the contract, stop, edit, and start a new run. Resuming does not approve changed files. Stop/pause cancel verification and future continuation; use OpenCode's interrupt control to cancel an already-running model/tool action.
 
@@ -139,6 +165,10 @@ Add a `review` script with the same shape as a script check. It runs only after 
 Copy and customize the script before starting. Review is probabilistic and susceptible to evidence bias; deterministic checks remain mandatory. A prose goal cannot in general be automatically converted into a complete proof of success.
 
 ## Sidebar and telemetry
+
+![Master Goal sidebar preview](docs/sidebar.svg)
+
+Illustrative layout with sample values; terminal width and theme affect wrapping. The plugin appends this panel to OpenCode’s existing right sidebar.
 
 The sidebar shows run state, mode, checked criteria, verification iterations, assistant turns/steps, input/output/reasoning tokens, cache reads/writes, host-reported cost, output tokens per second, review verdict, and available native todos.
 

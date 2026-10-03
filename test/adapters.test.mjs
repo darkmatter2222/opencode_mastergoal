@@ -30,6 +30,15 @@ test("V1 registers command, injects compaction context and exposes read-only sta
   await assert.rejects(hooks.config(config));
   const out = { parts: [] };
   await hooks["command.execute.before"](
+    { command: "goal", sessionID: "s", arguments: "construct" },
+    out,
+  );
+  assert.match(out.parts[0].text, /MASTER GOAL CONSTRUCTION/);
+  const draft = { context: [] };
+  await hooks["experimental.session.compacting"]({ sessionID: "s" }, draft);
+  assert.match(draft.context[0], /MASTER GOAL CONSTRUCTION/);
+
+  await hooks["command.execute.before"](
     { command: "goal", sessionID: "s", arguments: "start" },
     out,
   );
@@ -72,11 +81,12 @@ test("V2 native command, context, RPC, event telemetry and disposal", async (t) 
   };
   const reg = () => ({ dispose: async () => {} });
   const synthetic = [];
+  const constructionPrompts = [];
   const ctx = {
     location: { directory: f.root },
     session: {
       get: async () => ({ location: { directory: f.root } }),
-      prompt: async () => {},
+      prompt: async (input) => constructionPrompts.push(input),
       synthetic: async (x) => synthetic.push(x),
       hook: async (n, fn) => {
         hooks[n] = fn;
@@ -114,6 +124,13 @@ test("V2 native command, context, RPC, event telemetry and disposal", async (t) 
   };
   const dispose = await v2.setup(ctx);
   t.after(dispose);
+  await cmd.execute({ sessionID: "s", prompt: { text: "construct" } });
+  assert.match(constructionPrompts[0].text, /MASTER GOAL CONSTRUCTION/);
+  assert.equal(constructionPrompts[0].resume, true);
+  const draft = { sessionID: "s", system: [] };
+  await hooks.compaction(draft);
+  assert.match(draft.system[0].text, /MASTER GOAL CONSTRUCTION/);
+
   await cmd.execute({
     sessionID: "s",
     prompt: { text: "start" },
