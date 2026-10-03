@@ -32,6 +32,8 @@ Repeat the install command to update. To unregister, use the same command with `
 
 **Disable other plugins that own `/goal` or automatically inject continuation prompts in this session.** One scheduler should own the run. Do not load both Master Goal server adapters together.
 
+If an older installer fails with `prepare`, `npm run build`, or `tsc` while packing the npx cache, update to **0.2.1 or newer**. The fixed installer packages compiled files without build hooks. You do not need a global TypeScript installation or edits to npm's cache. Node/npm engine warnings from dependencies are separate from this packaging failure; the Windows installer is tested with Node 22.18.0 and npm 10.9.3 in CI.
+
 For development:
 
 ```sh

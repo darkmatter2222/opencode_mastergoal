@@ -41,3 +41,15 @@ jobs:
       - run: node scripts/host-canary-v2.mjs "$PWD/.host-v2/node_modules/.bin/opencode"
       - run: BUN_BE_BUN=1 .host-v2/node_modules/.bin/opencode --conditions=browser scripts/tui-canary.mjs
       - run: node scripts/install-canary.mjs
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: npm
+      - run: npm install --global npm@10.9.3
+      - run: npm ci
+      - run: npm run test:install

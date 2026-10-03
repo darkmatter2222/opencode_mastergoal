@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, cp, readFile, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,36 @@ export function globalConfig(env = process.env) {
       env.XDG_CONFIG_HOME || path.join(homedir(), ".config"),
       "opencode",
     )
+  );
+}
+/** Stage a compiled distribution without lifecycle hooks or build dependencies.
+ * npm 10 can run prepare during directory packing despite --ignore-scripts.
+ * Never mutate the source checkout or the shared npx cache to work around it.
+ */
+export async function stageRuntime(source: string, destination: string) {
+  const manifest = JSON.parse(
+    await readFile(path.join(source, "package.json"), "utf8"),
+  );
+  const files = [
+    "dist",
+    "server.js",
+    "tui.js",
+    "README.md",
+    "LICENSE",
+    "docs",
+    "examples",
+  ];
+  await mkdir(destination, { recursive: true });
+  for (const file of files)
+    await cp(path.join(source, file), path.join(destination, file), {
+      recursive: true,
+    });
+  delete manifest.scripts;
+  delete manifest.devDependencies;
+  manifest.files = files;
+  await writeFile(
+    path.join(destination, "package.json"),
+    JSON.stringify(manifest, null, 2) + "\n",
   );
 }
 export async function setup(root: string, host: 1 | 2, remove = false) {
@@ -45,9 +75,11 @@ export async function setup(root: string, host: 1 | 2, remove = false) {
     );
   try {
     const source = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+    const staged = path.join(temp, "package");
+    await stageRuntime(source, staged);
     const packed = await runNpm(
       ["pack", "--ignore-scripts", "--json", "--pack-destination", temp],
-      source,
+      staged,
     );
     const filename = JSON.parse(packed.stdout)[0].filename as string;
     await mkdir(managed, { recursive: true });

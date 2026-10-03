@@ -8,7 +8,14 @@ import assert from "node:assert/strict";
 const exec = promisify(execFile);
 const root = await mkdtemp(path.join(tmpdir(), "mastergoal-package-"));
 const repo = path.resolve(import.meta.dirname, "..");
-const npmScript = process.env.npm_execpath;
+const npmScript =
+  process.env.npm_execpath ||
+  (process.platform === "win32"
+    ? path.join(
+        path.dirname(process.execPath),
+        "node_modules/npm/bin/npm-cli.js",
+      )
+    : undefined);
 const npm = (args, options = {}) =>
   exec(
     npmScript ? process.execPath : "npm",
@@ -20,7 +27,9 @@ try {
     ["pack", "--ignore-scripts", "--json", "--pack-destination", root],
     { cwd: repo },
   );
-  const tar = path.join(root, JSON.parse(packed.stdout)[0].filename);
+  // npm 10 may print prepare output before the JSON result.
+  const packedJson = packed.stdout.slice(packed.stdout.indexOf("["));
+  const tar = path.join(root, JSON.parse(packedJson)[0].filename);
   const env = {
     ...process.env,
     OPENCODE_CONFIG_DIR: path.join(root, "global"),
@@ -53,6 +62,17 @@ try {
       target,
       ".mastergoal-runtime/node_modules/@darkmatter2222/opencode-mastergoal",
     );
+    const manifest = JSON.parse(
+      await readFile(path.join(runtime, "package.json"), "utf8"),
+    );
+    assert.equal(
+      manifest.scripts,
+      undefined,
+      "Installed runtime cannot run prepare or prepack",
+    );
+    await assert.rejects(readFile(path.join(runtime, "tsconfig.json")), {
+      code: "ENOENT",
+    });
     const help = await exec(process.execPath, [
       path.join(runtime, "dist/cli.js"),
       "help",
