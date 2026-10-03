@@ -5,6 +5,23 @@ import { randomUUID } from "node:crypto";
 import lockfile from "proper-lockfile";
 import { digest } from "./contract.js";
 import type { State } from "./engine.js";
+export async function replaceStateFile(
+  source: string,
+  target: string,
+  move = rename,
+) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await move(source, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (attempt >= 10 || !["EPERM", "EACCES", "EBUSY"].includes(code ?? ""))
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
+    }
+  }
+}
 export class Store {
   readonly directory: string;
   constructor(
@@ -44,7 +61,7 @@ export class Store {
     } finally {
       await file.close();
     }
-    await rename(tmp, path.join(this.directory, "state.json"));
+    await replaceStateFile(tmp, path.join(this.directory, "state.json"));
   }
   async exclusive<T>(work: () => Promise<T>): Promise<T> {
     await mkdir(this.directory, { recursive: true, mode: 0o700 });

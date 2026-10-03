@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { realpath } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { Engine } from "./engine.js";
 import { command, initGoal, help } from "./commands.js";
 import { lockGoal } from "./contract.js";
@@ -83,7 +83,8 @@ export async function main(args = process.argv.slice(2)) {
 }
 if (
   process.argv[1] &&
-  import.meta.url === pathToFileURL(await realpath(process.argv[1])).href
+  (await realpath(fileURLToPath(import.meta.url))) ===
+    (await realpath(process.argv[1]))
 )
   void main().catch((e) => {
     console.error(`Master Goal: ${e.message}`);
