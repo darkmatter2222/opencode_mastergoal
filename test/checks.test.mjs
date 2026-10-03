@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runCheck } from "../dist/checks.js";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { digest } from "../dist/contract.js";
 import { fixture } from "./helpers.mjs";
 for (const [name, source, passed] of [
@@ -89,3 +91,52 @@ for (const [actual, expected, passed] of [
       passed,
     );
   });
+
+for (const cause of ["timeout", "overflow", "cancel"]) {
+  test(`verifier process has exited before ${cause} resolves`, async (t) => {
+    const f = await fixture(t);
+    await f.write(
+      "v.mjs",
+      `import {writeFileSync} from "node:fs";
+writeFileSync("pid.txt", String(process.pid));
+${cause === "overflow" ? 'console.log("x".repeat(100000));' : ""}
+setInterval(()=>{},1000);`,
+    );
+    const controller = new AbortController();
+    const result = runCheck(
+      f.root,
+      {
+        id: cause,
+        type: "script",
+        path: "v.mjs",
+        runtime: process.execPath,
+        timeoutMs: 1500,
+      },
+      controller.signal,
+    );
+    let pid;
+    const deadline = Date.now() + 5000;
+    while (!pid && Date.now() < deadline) {
+      try {
+        pid = Number(await readFile(path.join(f.root, "pid.txt"), "utf8"));
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      if (!pid) await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    if (cause === "cancel") controller.abort();
+    const outcome = await result;
+    assert(pid, "Verifier must have started");
+    assert.equal(outcome.passed, false);
+    assert.equal(outcome.error, true);
+    assert.match(
+      outcome.detail,
+      cause === "timeout"
+        ? /timed out/
+        : cause === "overflow"
+          ? /exceeded/
+          : /cancelled/,
+    );
+    assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+  });
+}

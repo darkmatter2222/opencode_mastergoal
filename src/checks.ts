@@ -43,6 +43,7 @@ export async function runCheck(
       }>((resolve) => {
         let output = "",
           ended = false,
+          failure: string | undefined,
           timer: ReturnType<typeof setTimeout> | undefined;
         const child = spawn(check.runtime, [script, ...(check.args ?? [])], {
           cwd: root,
@@ -66,31 +67,41 @@ export async function runCheck(
             else child.kill("SIGKILL");
           } catch {}
         };
-        const cancel = () => {
+        const stop = (reason: string) => {
+          if (ended || failure) return;
+          failure = reason;
+          clearTimeout(timer);
+          signal?.removeEventListener("abort", cancel);
           kill();
-          finish(false, "Verification cancelled", true);
+          // Close our pipes as well: descendants may have inherited them.
+          // Resolve only after the direct child has exited and closed its handles.
+          child.stdout.destroy();
+          child.stderr.destroy();
         };
+        const cancel = () => stop("Verification cancelled");
+        timer = setTimeout(
+          () => stop("Verifier timed out"),
+          check.timeoutMs ?? 30_000,
+        );
         signal?.addEventListener("abort", cancel, { once: true });
         if (signal?.aborted) cancel();
-        timer = setTimeout(() => {
-          kill();
-          finish(false, "Verifier timed out", true);
-        }, check.timeoutMs ?? 30_000);
         const capture = (chunk: Buffer) => {
+          if (failure) return;
           output += chunk.toString();
-          if (Buffer.byteLength(output) > 64_000) {
-            kill();
-            finish(false, "Verifier output exceeded 64 KB", true);
-          }
+          if (Buffer.byteLength(output) > 64_000)
+            stop("Verifier output exceeded 64 KB");
         };
         child.stdout.on("data", capture);
         child.stderr.on("data", capture);
-        child.once("error", (e) => finish(false, e.message, true));
+        child.once("error", (e) => {
+          failure ??= e.message;
+        });
         child.once("close", (code, sig) =>
           finish(
-            code === 0,
-            `exit=${code} signal=${sig ?? "none"}\n${output.slice(-8000)}`,
-            sig !== null,
+            !failure && code === 0,
+            failure ??
+              `exit=${code} signal=${sig ?? "none"}\n${output.slice(-8000)}`,
+            failure !== undefined || sig !== null,
           ),
         );
       });
