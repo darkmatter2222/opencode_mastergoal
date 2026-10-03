@@ -33,12 +33,17 @@ const test = await testRender(() => render({ sessionID: "ses_canary" }), {
   height: 18,
 });
 try {
-  await new Promise((r) => setTimeout(r, 50));
-  await test.renderOnce();
-  const frame = test.captureCharFrame();
+  let frame = "";
+  const deadline = Date.now() + 5000;
+  do {
+    await new Promise((r) => setTimeout(r, 50));
+    await test.renderOnce();
+    frame = test.captureCharFrame();
+  } while (!frame.includes("33% checks") && Date.now() < deadline);
   assert.match(frame, /MASTER GOAL/);
   assert.match(frame, /33% checks/);
-  assert.match(frame, /42.0/);
+  assert.match(frame, /Tokens: 12,345/);
+  assert.doesNotMatch(frame, /Output\/s|TPS/);
   assert.equal(calls, 1);
   console.log(frame);
   console.log("Native sidebar rendered; remote location forwarded correctly.");

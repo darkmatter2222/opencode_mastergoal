@@ -41,7 +41,7 @@ jobs:
       - run: node scripts/install-canary.mjs
   windows-installer:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

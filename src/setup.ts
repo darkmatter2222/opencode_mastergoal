@@ -79,7 +79,7 @@ export async function setup(root: string, remove = false) {
     exec(
       npmScript ? process.execPath : "npm",
       npmScript ? [npmScript, ...args] : args,
-      { cwd, maxBuffer: 4 * 1024 * 1024, timeout: 120000 },
+      { cwd, maxBuffer: 4 * 1024 * 1024, timeout: 300000 },
     );
   try {
     const source = path.dirname(path.dirname(fileURLToPath(import.meta.url)));

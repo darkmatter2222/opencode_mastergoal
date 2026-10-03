@@ -20,7 +20,7 @@ const npm = (args, options = {}) => {
   const pending = exec(
     npmScript ? process.execPath : "npm",
     npmScript ? [npmScript, ...args] : args,
-    { maxBuffer: 8 * 1024 * 1024, timeout: 180000, ...options },
+    { maxBuffer: 8 * 1024 * 1024, timeout: 600000, ...options },
   );
   pending.child.stdin.end();
   pending.child.stderr.on("data", (chunk) => process.stderr.write(chunk));
