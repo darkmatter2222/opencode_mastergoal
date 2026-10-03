@@ -1,0 +1,70 @@
+{
+  "name": "@darkmatter2222/opencode-mastergoal",
+  "version": "0.1.0",
+  "description": "File-first OpenCode goal orchestration with locked deterministic completion contracts",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/darkmatter2222/opencode_mastergoal.git"
+  },
+  "exports": {
+    ".": "./dist/server.js",
+    "./v1": "./dist/v1.js",
+    "./tui": "./dist/tui.js",
+    "./tui-v1": "./dist/tui-v1.js",
+    "./core": "./dist/engine.js",
+    "./server": "./dist/server.js"
+  },
+  "bin": {
+    "mastergoal": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "server.js",
+    "tui.js"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "benchmark": "npm run build && node benchmarks/run.mjs",
+    "verify": "npm run check && npm test && npm run benchmark",
+    "prepack": "npm run build",
+    "format": "prettier --write src test scripts benchmarks *.json *.js docs README.md CONTRIBUTING.md .github",
+    "format:check": "prettier --check src test scripts benchmarks *.json *.js docs README.md CONTRIBUTING.md .github"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.18.34",
+    "@opencode/plugin": "2.0.22",
+    "jsonc-parser": "3.3.1",
+    "proper-lockfile": "^4.1.2"
+  },
+  "peerDependencies": {
+    "@opentui/solid": ">=0.5.14 <0.6",
+    "solid-js": ">=1.9.0 <2"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/solid": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@opentui/solid": "0.5.14",
+    "@types/node": "^22.0.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "prettier": "^3.6.2",
+    "solid-js": "1.9.12",
+    "typescript": "5.9.3"
+  }
+}

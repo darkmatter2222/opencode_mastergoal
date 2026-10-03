@@ -1,0 +1,190 @@
+{
+  "kind": "Deterministic harness regression benchmark; scripted candidates, no live LLM",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "date": "2026-10-03T20:31:25.281Z",
+  "passed": 20,
+  "total": 20,
+  "rows": [
+    {
+      "id": "01-add",
+      "title": "Implement addition",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 112.87
+    },
+    {
+      "id": "02-sort",
+      "title": "Numeric sort",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 115.69
+    },
+    {
+      "id": "03-dedupe",
+      "title": "Stable deduplication",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 116
+    },
+    {
+      "id": "04-slug",
+      "title": "Slug generator",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 111.6
+    },
+    {
+      "id": "05-clamp",
+      "title": "Clamp a value",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 120.39
+    },
+    {
+      "id": "06-factorial",
+      "title": "Factorial with validation",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 123.96
+    },
+    {
+      "id": "07-chunk",
+      "title": "Array chunks",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 112.53
+    },
+    {
+      "id": "08-count",
+      "title": "Word frequencies",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 117.28
+    },
+    {
+      "id": "09-median",
+      "title": "Median",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 115.84
+    },
+    {
+      "id": "10-escape",
+      "title": "HTML escaping",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 109.64
+    },
+    {
+      "id": "11-transpose",
+      "title": "Matrix transpose",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 111.73
+    },
+    {
+      "id": "12-retry",
+      "title": "Bounded async retry",
+      "pass": true,
+      "baseline": "active",
+      "actual": "completed",
+      "expected": "completed",
+      "durationMs": 106.51
+    },
+    {
+      "id": "13-impossible",
+      "title": "One plus one must equal three",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 6.16
+    },
+    {
+      "id": "14-forever",
+      "title": "Continuous maintenance",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 5.66
+    },
+    {
+      "id": "15-false-claim",
+      "title": "Ignore completion prose",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 7.26
+    },
+    {
+      "id": "16-all-of",
+      "title": "Partial success is insufficient",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 5.89
+    },
+    {
+      "id": "17-timeout",
+      "title": "Timed-out verifier cannot pass",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 314.01
+    },
+    {
+      "id": "18-review-veto",
+      "title": "Independent review veto",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 106.81
+    },
+    {
+      "id": "19-tamper",
+      "title": "Verifier tampering is blocked",
+      "pass": true,
+      "baseline": "active",
+      "actual": "blocked",
+      "expected": "blocked",
+      "durationMs": 60.34
+    },
+    {
+      "id": "20-forever-pass",
+      "title": "Passing checks do not end forever mode",
+      "pass": true,
+      "baseline": "active",
+      "actual": "active",
+      "expected": "active",
+      "durationMs": 5.42
+    }
+  ]
+}
