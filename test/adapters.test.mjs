@@ -116,8 +116,12 @@ test("V2 native command, context, RPC, event telemetry and disposal", async (t) 
     },
   );
   wake?.();
-  await wait(30);
-  const state = await f.engine.store("s").read();
+  let state;
+  const deadline = Date.now() + 5000;
+  do {
+    await wait(10);
+    state = await f.engine.store("s").read();
+  } while (state.usage.output !== 5 && Date.now() < deadline);
   assert.equal(state.usage.output, 5);
   assert.equal(state.usage.durationMs, 100);
   await cmd.execute({ sessionID: "s", prompt: { text: "stop" } });
