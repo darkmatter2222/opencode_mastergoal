@@ -11,18 +11,19 @@ export async function main(args = process.argv.slice(2)) {
   const action = args.shift() ?? "help";
   if (action === "help" || action === "--help") {
     console.log(
-      `Master Goal\nmastergoal install --host 1|2 --global | --local [project-directory]\nmastergoal uninstall --host 1|2 --global | --local [project-directory]\nmastergoal init [goal.md]\nmastergoal validate [goal.md]\nmastergoal status|inspect|check|pause|stop|resume --session SESSION_ID\nOpenCode: ${help}`,
+      `Master Goal\nmastergoal install --global | --local [project-directory]\nmastergoal uninstall --global | --local [project-directory]\nmastergoal init [goal.md]\nmastergoal validate [goal.md]\nmastergoal status|inspect|check|pause|stop|resume --session SESSION_ID\nOpenCode: ${help}`,
     );
     return;
   }
   if (action === "install" || action === "uninstall") {
     const hostIndex = args.indexOf("--host");
-    const hostValue = args[hostIndex + 1];
-    if (hostIndex < 0 || !["1", "2"].includes(hostValue ?? ""))
-      throw new Error(
-        "Specify --host 1 for OpenCode 1.x or --host 2 for OpenCode 2.x",
-      );
-    args.splice(hostIndex, 2);
+    if (hostIndex >= 0) {
+      if (args[hostIndex + 1] !== "2")
+        throw new Error(
+          "Master Goal requires OpenCode 2.x (tested with 2.0.22). Upgrade OpenCode before installing.",
+        );
+      args.splice(hostIndex, 2);
+    }
     const global = args.includes("--global");
     const local = args.includes("--local");
     const linked = args.includes("--link");
@@ -37,15 +38,18 @@ export async function main(args = process.argv.slice(2)) {
       (global && positional.length)
     )
       throw new Error(
-        "Usage: mastergoal install --host 1|2 --global | --local [project-directory]",
+        "Usage: mastergoal install --global | --local [project-directory]",
       );
     const root = global ? globalConfig() : path.resolve(positional[0] ?? ".");
     const files = await (linked ? install : setup)(
       root,
-      Number(hostValue) as 1 | 2,
       action === "uninstall",
     );
     console.log(files.join("\n"));
+    if (action === "install")
+      console.log(
+        "Master Goal installed for OpenCode 2.x. Close OpenCode, run opencode service stop, then reopen and use /goal help. The sidebar loads with the server plugin.",
+      );
     return;
   }
   if (action === "construct")

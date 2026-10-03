@@ -5,7 +5,7 @@ Research date: 2026-10-03. This repository is an original implementation. Refere
 ## Primary sources inspected
 
 - [OpenCode plugin documentation](https://opencode.ai/docs/plugins/), server SDK and command execution/compaction source.
-- [OpenCode repository](https://github.com/anomalyco/opencode): 1.x source commit `907b3bc518fa48e90e8ec24dd327d13eee71c36c`; v2 branch commit `d1f8f5b35ef90499902797129457f2102abe18b6`. Published SDK types used for compilation: `@opencode-ai/plugin@1.18.34`, `@opencode/plugin@2.0.22`.
+- [OpenCode repository](https://github.com/anomalyco/opencode): 1.x source commit `907b3bc518fa48e90e8ec24dd327d13eee71c36c`; v2 branch commit `d1f8f5b35ef90499902797129457f2102abe18b6`. Current compilation uses `@opencode/plugin@2.0.22` only; the 1.x source inspection is historical research, not supported functionality.
 - [ByBrawe/OpenCode Goals](https://github.com/ByBrawe/opencode-goal), version 1.3.45, commit `fb251573e65c6e25a8bbef7216eaf5c34491d24d`: package entries, contract/file verification, completion audit, semantic verifier, lifecycle integration, telemetry and sidebar.
 - [Anthropic's Ralph Loop](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-loop), repository commit `d182ca456ca09d31d139f7d3818d1d333b103cce`: stop hook and completion-promise handling.
 - [Ralph Orchestrator](https://github.com/mikeyobrien/ralph-orchestrator), commit `edc2b3268c9bd0c08a12c8193a7ace7ab2789261`: quality gates and reviewer/event workflow.
@@ -25,6 +25,8 @@ Research date: 2026-10-03. This repository is an original implementation. Refere
 These are design observations, not measured competitor rankings. The reported premature stopping of the user's previous setup was not reproduced against its exact historical configuration. The current upstream repository already implements substantial verification and regression testing; attributing the issue to “it only trusts done” would be inaccurate.
 
 ## Host findings that affected implementation
+
+As of 0.3.0, only OpenCode 2.x is supported. Earlier-generation findings below are historical comparisons.
 
 1. OpenCode 1.x continuation is event-driven; there is no universal plugin stop-veto hook in the inspected interface.
 2. Native 2.x commands can execute directly, so model-mediated lifecycle tools are unnecessary.

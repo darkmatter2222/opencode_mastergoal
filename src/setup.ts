@@ -45,7 +45,7 @@ export async function stageRuntime(source: string, destination: string) {
     JSON.stringify(manifest, null, 2) + "\n",
   );
 }
-export async function setup(root: string, host: 1 | 2, remove = false) {
+export async function setup(root: string, remove = false) {
   // Never register the disposable npx cache. Install a self-contained runtime.
   const managed = path.join(root, ".mastergoal-runtime");
   const packageRoot = path.join(
@@ -54,7 +54,7 @@ export async function setup(root: string, host: 1 | 2, remove = false) {
     "@darkmatter2222",
     "opencode-mastergoal",
   );
-  if (remove) return install(root, host, true, packageRoot);
+  if (remove) return install(root, true, packageRoot);
   const temp = await mkdtemp(path.join(tmpdir(), "mastergoal-install-"));
   const npmScript = process.env.npm_execpath?.endsWith(".js")
     ? process.env.npm_execpath
@@ -94,7 +94,7 @@ export async function setup(root: string, host: 1 | 2, remove = false) {
       ],
       managed,
     );
-    return await install(root, host, false, packageRoot);
+    return await install(root, false, packageRoot);
   } finally {
     await rm(temp, { recursive: true, force: true });
   }

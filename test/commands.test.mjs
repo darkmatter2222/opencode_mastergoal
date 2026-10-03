@@ -31,31 +31,30 @@ test("command aliases and status", async (t) => {
   await command(f.engine, "s", "end");
   assert.match((await command(f.engine, "s", "status")).text, /STOPPED/);
 });
-for (const host of [1, 2])
-  test(`host ${host} installer preserves JSONC, unrelated plugins and is idempotent`, async (t) => {
-    const f = await fixture(t);
-    await f.write(
-      "opencode.jsonc",
-      '{\n // keep me\n "' +
-        (host === 1 ? "plugin" : "plugins") +
-        '": ["other-plugin"],\n "model":"mine",\n}\n',
-    );
-    await install(f.root, host);
-    await install(f.root, host);
-    const text = await readFile(path.join(f.root, "opencode.jsonc"), "utf8");
-    assert.match(text, /keep me/);
-    assert.match(text, /other-plugin/);
-    assert.equal((text.match(/file:\/\//g) ?? []).length, 1);
-    await install(f.root, host, true);
-    assert.doesNotMatch(
-      await readFile(path.join(f.root, "opencode.jsonc"), "utf8"),
-      /file:\/\//,
-    );
-  });
+test("2.x installer preserves JSONC, unrelated plugins and is idempotent", async (t) => {
+  const f = await fixture(t);
+  await f.write(
+    "opencode.jsonc",
+    '{\n // keep me\n "' +
+      "plugins" +
+      '": ["other-plugin"],\n "model":"mine",\n}\n',
+  );
+  await install(f.root);
+  await install(f.root);
+  const text = await readFile(path.join(f.root, "opencode.jsonc"), "utf8");
+  assert.match(text, /keep me/);
+  assert.match(text, /other-plugin/);
+  assert.equal((text.match(/file:\/\//g) ?? []).length, 1);
+  await install(f.root, true);
+  assert.doesNotMatch(
+    await readFile(path.join(f.root, "opencode.jsonc"), "utf8"),
+    /file:\/\//,
+  );
+});
 test("invalid config aborts install before writes", async (t) => {
   const f = await fixture(t);
   await f.write("opencode.json", "{broken");
-  await assert.rejects(install(f.root, 1));
+  await assert.rejects(install(f.root));
   await assert.rejects(readFile(path.join(f.root, "tui.json")));
 });
 
@@ -131,4 +130,60 @@ test("CLI entry works through the symlink used by npx", async (t) => {
   }
   const result = await promisify(execFile)(process.execPath, [link, "help"]);
   assert.match(result.stdout, /construct/);
+});
+
+test("2.x registration discovers both entrypoints without creating terminal config", async (t) => {
+  const f = await fixture(t);
+  await install(f.root);
+  const config = JSON.parse(
+    await readFile(path.join(f.root, "opencode.json"), "utf8"),
+  );
+  assert.equal(config.plugins.length, 1);
+  assert.equal(config.plugin, undefined);
+  for (const name of ["tui.json", "cli.json"])
+    await assert.rejects(readFile(path.join(f.root, name)), { code: "ENOENT" });
+});
+test("upgrade removes only owned legacy entries and preserves other plugin registrations", async (t) => {
+  const f = await fixture(t);
+  const { pathToFileURL } = await import("node:url");
+  const runtime = path.join(
+    f.root,
+    ".mastergoal-runtime/node_modules/@darkmatter2222/opencode-mastergoal",
+  );
+  const spec = pathToFileURL(runtime).href;
+  await f.write(
+    "opencode.json",
+    JSON.stringify({
+      plugin: ["other-server", spec + "/dist/v1.js"],
+      plugins: [spec],
+    }),
+  );
+  await f.write(
+    "tui.json",
+    JSON.stringify({
+      plugin: ["other-tui", spec + "/dist/tui-v1.js"],
+      plugins: [spec],
+      theme: "dark",
+    }),
+  );
+  await f.write("cli.json", JSON.stringify({ plugins: ["other-cli", spec] }));
+  await install(f.root, false, runtime);
+  const server = JSON.parse(
+    await readFile(path.join(f.root, "opencode.json"), "utf8"),
+  );
+  assert.equal(server.plugin, undefined);
+  assert.deepEqual(server.plugins, ["other-server", spec]);
+  const tui = JSON.parse(await readFile(path.join(f.root, "tui.json"), "utf8"));
+  assert.deepEqual(tui.plugin, ["other-tui"]);
+  assert.deepEqual(tui.plugins, []);
+  assert.equal(tui.theme, "dark");
+  const cli = JSON.parse(await readFile(path.join(f.root, "cli.json"), "utf8"));
+  assert.deepEqual(cli.plugins, ["other-cli"]);
+});
+test("CLI rejects the retired host before changing configuration", async () => {
+  const { main } = await import("../dist/cli.js");
+  await assert.rejects(
+    main(["install", "--host", "1", "--global"]),
+    /requires OpenCode 2/,
+  );
 });

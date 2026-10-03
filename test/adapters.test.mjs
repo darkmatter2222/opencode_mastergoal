@@ -1,63 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import v1 from "../dist/v1.js";
 import v2 from "../dist/server.js";
 import { fixture, contract } from "./helpers.mjs";
 import { Engine } from "../dist/engine.js";
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-test("V1 registers command, injects compaction context and exposes read-only status", async (t) => {
-  const f = await fixture(t);
-  const prior = process.env.MASTERGOAL_STATE_DIR;
-  process.env.MASTERGOAL_STATE_DIR = f.state;
-  t.after(() => {
-    if (prior === undefined) delete process.env.MASTERGOAL_STATE_DIR;
-    else process.env.MASTERGOAL_STATE_DIR = prior;
-  });
-  const hooks = await v1({
-    directory: f.root,
-    client: {
-      tui: { showToast: async () => ({}) },
-      session: {
-        status: async () => ({ data: {} }),
-        promptAsync: async () => ({}),
-      },
-    },
-  });
-  t.after(() => hooks.dispose());
-  const config = {};
-  await hooks.config(config);
-  assert(config.command.goal);
-  await assert.rejects(hooks.config(config));
-  const out = { parts: [] };
-  await hooks["command.execute.before"](
-    { command: "goal", sessionID: "s", arguments: "construct" },
-    out,
-  );
-  assert.match(out.parts[0].text, /MASTER GOAL CONSTRUCTION/);
-  const draft = { context: [] };
-  await hooks["experimental.session.compacting"]({ sessionID: "s" }, draft);
-  assert.match(draft.context[0], /MASTER GOAL CONSTRUCTION/);
-
-  await hooks["command.execute.before"](
-    { command: "goal", sessionID: "s", arguments: "start" },
-    out,
-  );
-  assert(out.parts[0].text.includes("Locked contract"));
-  const compact = { context: [] };
-  await hooks["experimental.session.compacting"]({ sessionID: "s" }, compact);
-  assert(compact.context[0].includes("goal"));
-  assert.deepEqual(Object.keys(hooks.tool), ["mastergoal_status"]);
-  await assert.rejects(
-    hooks["tool.execute.before"](
-      { sessionID: "s", tool: "write" },
-      { args: { filePath: "goal.md" } },
-    ),
-  );
-  await hooks.event({
-    event: { type: "session.error", properties: { sessionID: "s" } },
-  });
-  assert.equal((await f.engine.store("s").read()).status, "blocked");
-});
 test("V2 native command, context, RPC, event telemetry and disposal", async (t) => {
   const f = await fixture(t);
   const prior = process.env.MASTERGOAL_STATE_DIR;
@@ -234,37 +180,4 @@ test("V2 status command cannot cancel a pending continuation", async (t) => {
   await cmd.execute({ sessionID: "s", prompt: { text: "status" } });
   await wait(400);
   assert.equal(prompts, 1);
-});
-test("V1 restart pauses stale verification and can resume with fresh checks", async (t) => {
-  const f = await fixture(t);
-  await f.engine.start("s");
-  await f.engine.mutate("s", (s) => {
-    s.verification = "interrupted-token";
-  });
-  const prior = process.env.MASTERGOAL_STATE_DIR;
-  process.env.MASTERGOAL_STATE_DIR = f.state;
-  t.after(() => {
-    if (prior === undefined) delete process.env.MASTERGOAL_STATE_DIR;
-    else process.env.MASTERGOAL_STATE_DIR = prior;
-  });
-  const hooks = await v1({
-    directory: f.root,
-    client: {
-      tui: { showToast: async () => ({}) },
-      session: {
-        status: async () => ({ data: {} }),
-        promptAsync: async () => ({}),
-      },
-    },
-  });
-  t.after(() => hooks.dispose());
-  await hooks.event({
-    event: { type: "session.idle", properties: { sessionID: "s" } },
-  });
-  assert.equal((await f.engine.store("s").read()).status, "paused");
-  await hooks["command.execute.before"](
-    { command: "goal", sessionID: "s", arguments: "resume" },
-    { parts: [] },
-  );
-  assert.equal((await f.engine.verify("s")).iterations, 1);
 });

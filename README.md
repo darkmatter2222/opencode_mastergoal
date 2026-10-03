@@ -1,6 +1,6 @@
 # Master Goal
 
-**File-first goal orchestration for OpenCode. The model does the work. The host checks the result.**
+**File-first goal orchestration for OpenCode 2.x. The model does the work. The host checks the result.**
 
 Master Goal is an original implementation, built from scratch. It is not a fork of OpenCode Goals. It separates the agent's reasoning from the authority to declare completion.
 
@@ -10,29 +10,41 @@ Explicit **forever mode** has no success transition and no default iteration, to
 
 ## Quick install
 
-Requires Node.js 22+, npm, Git, and OpenCode. Run `opencode --version` to choose `--host 1` or `--host 2`.
+Requires Node.js 22+, npm, Git, and **OpenCode 2.x** (tested with 2.0.22). Version 0.3.0 removes OpenCode 1.x support. `--host 1` is rejected; `--host 2` is accepted for older install commands but is no longer needed.
 
 Install globally for all your OpenCode projects:
 
 ```sh
-npx --yes --package=github:darkmatter2222/opencode_mastergoal mastergoal install --host 2 --global
+npx --yes --package=github:darkmatter2222/opencode_mastergoal mastergoal install --global
 ```
 
 Or install only in the current project (run this from that project or sub-repository):
 
 ```sh
-npx --yes --package=github:darkmatter2222/opencode_mastergoal mastergoal install --host 2 --local
+npx --yes --package=github:darkmatter2222/opencode_mastergoal mastergoal install --local
 ```
 
-**Use `--host 1` for OpenCode 1.x.** You can append a project directory after `--local`; quote paths containing spaces. Fully restart OpenCode after installing or updating. This installs directly from GitHub; an npm registry release is not required, and this package is not yet published there. Initial installation builds the package and downloads dependencies.
+You can append a project directory after `--local`; quote paths containing spaces. Close OpenCode, run `opencode service stop`, then reopen after installing or updating. A shared background server can otherwise retain the previously loaded plugin list. This installs directly from GitHub; an npm registry release is not required, and this package is not yet published there. Initial installation builds the package and downloads dependencies.
 
-Global configuration uses `OPENCODE_CONFIG_DIR`, otherwise `$XDG_CONFIG_HOME/opencode`, otherwise `~/.config/opencode`. Project installation writes `opencode.json[c]` and `tui.json[c]` at the selected project root. Both preserve JSONC comments and unrelated settings, back up changed configuration, and install a durable runtime in `.mastergoal-runtime` alongside it. Add that directory to your project's `.gitignore`. Clearing the npx cache does not remove your installed plugin.
+Global configuration uses `OPENCODE_CONFIG_DIR`, otherwise `$XDG_CONFIG_HOME/opencode`, otherwise `~/.config/opencode`. Project installation writes `opencode.json[c]` at the selected project root. OpenCode 2 discovers both the server and sidebar entrypoints from this single registration; the installer does not create `tui.json` or `cli.json`. It removes this package’s obsolete entries from existing terminal config files while preserving unrelated settings. Both installation scopes preserve JSONC comments and unrelated settings, back up changed configuration, and install a durable runtime in `.mastergoal-runtime` alongside it. Add that directory to your project's `.gitignore`. Clearing the npx cache does not remove your installed plugin.
 
-Repeat the install command to update. To unregister, use the same command with `uninstall` instead of `install`, keeping the same host and scope. Uninstall preserves goals, runtime files and run history; you may remove `.mastergoal-runtime` after unregistering it. Choose one scope per project to avoid loading the plugin twice.
+Repeat the install command to update. To unregister, use the same command with `uninstall` instead of `install`, keeping the same scope. Uninstall preserves goals, runtime files and run history; you may remove `.mastergoal-runtime` after unregistering it. Choose one scope per project to avoid loading the plugin twice.
 
-**Disable other plugins that own `/goal` or automatically inject continuation prompts in this session.** One scheduler should own the run. Do not load both Master Goal server adapters together.
+**Disable other plugins that own `/goal` or automatically inject continuation prompts in this session.** One scheduler should own the run.
 
 If an older installer fails with `prepare`, `npm run build`, or `tsc` while packing the npx cache, update to **0.2.1 or newer**. The fixed installer packages compiled files without build hooks. You do not need a global TypeScript installation or edits to npm's cache. Node/npm engine warnings from dependencies are separate from this packaging failure; the Windows installer is tested with Node 22.18.0 and npm 10.9.3 in CI.
+
+### Upgrade an npm-installed OpenCode to 2.x
+
+Close OpenCode first, then run in your terminal:
+
+```sh
+npm uninstall -g opencode-ai
+npm install -g @opencode/cli@2
+opencode --version
+```
+
+The version must start with `2.`. This replaces the npm-managed executable and preserves OpenCode configuration and session data. If `where opencode` on Windows still resolves to an older standalone executable, update that installation or its PATH order. Launch plain `opencode` first to verify `/goal help`; custom launchers such as `opencode-spark` must call the updated executable and retain the intended provider/configuration settings. Existing third-party 1.x plugins require migration or removal before use in 2.x.
 
 For development:
 
@@ -40,10 +52,10 @@ For development:
 git clone https://github.com/darkmatter2222/opencode_mastergoal.git
 cd opencode_mastergoal
 npm ci
-node dist/cli.js install --host 2 --local /absolute/path/to/project --link
+node dist/cli.js install --local /absolute/path/to/project --link
 ```
 
-`--link` registers this checkout directly; keep it in place and use `--link` for uninstall too. For remote OpenCode 2 servers, install on the server and configure the TUI package on the client; the sidebar reads state through RPC. The 1.x sidebar supports local client/server use only. Tested host versions and evidence are in [validation](docs/validation.md).
+`--link` registers this checkout directly; keep it in place and use `--link` for uninstall too. For remote OpenCode 2 servers, register the package on the server; OpenCode obtains the plugin list for the client, and the sidebar reads state through RPC. File-based package references must be accessible to the client; use a shared package installation when client and server filesystems differ. Tested host versions and evidence are in [validation](docs/validation.md).
 
 ## First goal
 
@@ -176,7 +188,7 @@ The sidebar shows run state, mode, checked criteria, verification iterations, as
 
 - **Check percentage** means passing checks / total checks. It is not a prediction of time remaining or overall task completion.
 - **Output/s** is provider-reported output tokens divided by measured request elapsed time. It includes request overhead. It is not raw GPU decode speed and is updated at completed message/step boundaries.
-- **Turns** count completed assistant messages in 1.x and provider steps in 2.x. They are not user-message counts.
+- **Turns** count completed provider steps. They are not user-message counts.
 - **Cost** comes from the host. Zero can mean the provider did not supply pricing.
 - Usage is scoped to the bound session after goal start. Child-agent sessions and optional external reviewer usage are not included.
 - Replayed usage events are deduplicated. The exact usage ledger grows with the run; current history is capped at 200 events.
@@ -210,6 +222,6 @@ The [20 sample goals](examples/) include 12 runnable coding exercises and eight 
 
 ## Developer guide
 
-`src/contract.ts` defines parsing and locking; `checks.ts` runs verifiers; `engine.ts` owns state transitions; `coordinator.ts` owns continuation admission. `v1.ts` and `server.ts` adapt the two host APIs. `tui-v1.ts` and `tui.ts` render read-only status. `rpc.ts` is the native sidebar's portable status contract.
+`src/contract.ts` defines parsing and locking; `checks.ts` runs verifiers; `engine.ts` owns state transitions; `coordinator.ts` owns continuation admission. `server.ts` integrates the OpenCode 2 API. `tui.ts` renders read-only status. `rpc.ts` is the native sidebar's portable status contract.
 
 See [research](docs/research.md), [architecture](docs/architecture.md), [contract design](docs/contracts.md), and [contributing](CONTRIBUTING.md). MIT licensed.

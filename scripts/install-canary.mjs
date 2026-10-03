@@ -20,9 +20,10 @@ const npm = (args, options = {}) =>
   exec(
     npmScript ? process.execPath : "npm",
     npmScript ? [npmScript, ...args] : args,
-    { maxBuffer: 8 * 1024 * 1024, ...options },
+    { maxBuffer: 8 * 1024 * 1024, timeout: 180000, ...options },
   );
 try {
+  console.log("Packing source distribution...");
   const packed = await npm(
     ["pack", "--ignore-scripts", "--json", "--pack-destination", root],
     { cwd: repo },
@@ -34,11 +35,16 @@ try {
     ...process.env,
     OPENCODE_CONFIG_DIR: path.join(root, "global"),
   };
-  for (const host of [1, 2]) {
+  for (const scopeName of ["local", "global"]) {
     const scope =
-      host === 1 ? ["--local", path.join(root, "project")] : ["--global"];
+      scopeName === "local"
+        ? ["--local", path.join(root, "project")]
+        : ["--global"];
     const target =
-      host === 1 ? path.join(root, "project") : env.OPENCODE_CONFIG_DIR;
+      scopeName === "local"
+        ? path.join(root, "project")
+        : env.OPENCODE_CONFIG_DIR;
+    console.log(`Installing ${scopeName} packaged runtime...`);
     await npm(
       [
         "exec",
@@ -47,11 +53,12 @@ try {
         "--",
         "mastergoal",
         "install",
-        "--host",
-        String(host),
         ...scope,
       ],
       { env },
+    );
+    console.log(
+      `Installed ${scopeName}; checking registration and uninstall...`,
     );
     const config = JSON.parse(
       await readFile(path.join(target, "opencode.json"), "utf8"),
@@ -65,6 +72,12 @@ try {
     const manifest = JSON.parse(
       await readFile(path.join(runtime, "package.json"), "utf8"),
     );
+    assert.equal(manifest.exports["./v1"], undefined);
+    assert.equal(manifest.exports["./tui-v1"], undefined);
+    assert.equal(manifest.dependencies["@opencode-ai/plugin"], undefined);
+    await assert.rejects(readFile(path.join(runtime, "dist/v1.js")), {
+      code: "ENOENT",
+    });
     assert.equal(
       manifest.scripts,
       undefined,
@@ -80,22 +93,17 @@ try {
     assert.match(help.stdout, /construct/);
     await exec(
       process.execPath,
-      [
-        path.join(runtime, "dist/cli.js"),
-        "uninstall",
-        "--host",
-        String(host),
-        ...scope,
-      ],
+      [path.join(runtime, "dist/cli.js"), "uninstall", ...scope],
       { env },
     );
+    console.log(`Uninstalled ${scopeName}.`);
     const removed = JSON.parse(
       await readFile(path.join(target, "opencode.json"), "utf8"),
     );
     assert.equal((removed.plugin || removed.plugins).length, 0);
   }
   console.log(
-    "Packaged npx install, durable CLI and uninstall passed: local v1 + global v2.",
+    "Packaged npx install, durable CLI and uninstall passed: local + global, OpenCode 2.x only.",
   );
 } finally {
   await rm(root, { recursive: true, force: true });

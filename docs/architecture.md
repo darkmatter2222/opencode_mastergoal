@@ -36,18 +36,18 @@ Run a single OpenCode server per project/session. Separate server processes shar
 
 ## Host API map
 
-| Capability             | OpenCode 1.18.34                                | OpenCode 2.0.22                                    |
-| ---------------------- | ----------------------------------------------- | -------------------------------------------------- |
-| Commands               | `config`, `command.execute.before`              | `command.transform` with direct execute callback   |
-| Continuation           | `session.idle`, `session.status`, `promptAsync` | execution events, `session.prompt` queued delivery |
-| Context                | system transform                                | `session.hook('context')`                          |
-| Compaction             | experimental compacting hook                    | `session.hook('compaction')`                       |
-| Direct edit protection | tool before hook                                | tool before hook                                   |
-| Usage                  | completed assistant messages                    | completed provider steps                           |
-| Sidebar                | `sidebar_content`, local state                  | `sidebar.content`, server RPC                      |
-| Lifecycle cleanup      | plugin dispose                                  | returned cleanup and registration disposal         |
+| Capability      | OpenCode 2.x                                       |
+| --------------- | -------------------------------------------------- |
+| Commands        | `command.transform` with direct execute callback   |
+| Continuation    | execution events, `session.prompt` queued delivery |
+| Context         | `session.hook('context')`                          |
+| Compaction      | `session.hook('compaction')`                       |
+| Edit protection | tool before hook                                   |
+| Usage           | completed provider steps                           |
+| Sidebar         | `sidebar.content`, server RPC                      |
+| Cleanup         | returned cleanup and registration disposal         |
 
-1.x has no general documented stop-veto hook. Its adapter continues after idle; it does not pretend to install a nonexistent hook. 2.x exposes direct commands and native execution events. Only relevant, supported hooks are used; changing model parameters, auth hooks, or provider transport would not strengthen completion verification.
+Only the native 2.x host API is supported. The server plugin registration also advertises its TUI entrypoint; no separate legacy terminal configuration is written.
 
 ## Security and truth boundaries
 

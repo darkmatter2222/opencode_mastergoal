@@ -1,7 +1,7 @@
 {
   "name": "@darkmatter2222/opencode-mastergoal",
-  "version": "0.2.1",
-  "description": "File-first OpenCode goal orchestration with locked deterministic completion contracts",
+  "version": "0.3.0",
+  "description": "OpenCode 2.x goal orchestration with locked deterministic completion contracts",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -10,9 +10,7 @@
   },
   "exports": {
     ".": "./dist/server.js",
-    "./v1": "./dist/v1.js",
     "./tui": "./dist/tui.js",
-    "./tui-v1": "./dist/tui-v1.js",
     "./core": "./dist/engine.js",
     "./server": "./dist/server.js"
   },
@@ -26,13 +24,14 @@
     "README.md",
     "LICENSE",
     "server.js",
-    "tui.js"
+    "tui.js",
+    "scripts/build.mjs"
   ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/build.mjs",
     "check": "tsc --noEmit",
     "test": "npm run build && node --test test/*.test.mjs",
     "benchmark": "npm run build && node benchmarks/run.mjs",
@@ -44,7 +43,6 @@
     "test:install": "npm run build && node scripts/install-canary.mjs"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "1.18.34",
     "@opencode/plugin": "2.0.22",
     "jsonc-parser": "3.3.1",
     "proper-lockfile": "^4.1.2",
