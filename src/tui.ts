@@ -15,17 +15,29 @@ export default Plugin.define({
         setProp(box, "paddingTop", 1);
         const text = createElement("text");
         setProp(text, "fg", ctx.theme.text.base);
-        const [value, setValue] = createSignal("MASTER GOAL\nLoading…");
-        insert(text, value);
+        const [value, setValue] = createSignal({ session: "", text: "" });
+        insert(text, () =>
+          value().session === props.sessionID
+            ? value().text
+            : "MASTER GOAL\nLoading…",
+        );
         insert(box, text);
         let generation = 0,
-          closed = false,
-          busy = false;
+          closed = false;
+        let selected: string | undefined;
+        let pending: number | undefined;
         const refresh = async () => {
-          if (closed || busy) return;
-          busy = true;
-          const current = ++generation;
+          if (closed) return;
           const session = props.sessionID;
+          if (selected !== session) {
+            selected = session;
+            generation++;
+            pending = undefined;
+            setValue({ session, text: "MASTER GOAL\nLoading…" });
+          }
+          if (pending !== undefined) return;
+          const current = ++generation;
+          pending = current;
           try {
             const location = ctx.data.session.get(session)?.location;
             if (!location) throw new Error("Session location unavailable");
@@ -35,18 +47,23 @@ export default Plugin.define({
               current === generation &&
               session === props.sessionID
             )
-              setValue((result as { text: string }).text);
+              setValue({ session, text: (result as { text: string }).text });
           } catch {
-            if (!closed && current === generation)
-              setValue("MASTER GOAL\nServer status unavailable");
+            if (
+              !closed &&
+              current === generation &&
+              session === props.sessionID
+            )
+              setValue({
+                session,
+                text: "MASTER GOAL\nServer status unavailable",
+              });
           } finally {
-            busy = false;
+            if (pending === current) pending = undefined;
           }
         };
         createEffect(() => {
           props.sessionID;
-          generation++;
-          setValue("MASTER GOAL\nLoading…");
           void refresh();
         });
         const timer = setInterval(() => void refresh(), 1000);

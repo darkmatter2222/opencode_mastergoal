@@ -51,3 +51,84 @@ try {
   cleanup();
   test.renderer.destroy();
 }
+
+// A pending request from another session must neither block nor overwrite B.
+const { createSignal } = await import("solid-js");
+let select, delayed;
+const requests = [];
+const switchingCleanup = sidebar.setup({
+  client: {
+    rpc: () => ({
+      read: (input, options) => {
+        requests.push(input.sessionID);
+        assert.equal(
+          options.location.directory,
+          `/projects/${input.sessionID}`,
+        );
+        if (input.sessionID === "A")
+          return new Promise((resolve) => {
+            delayed = resolve;
+          });
+        return Promise.resolve({ text: "MASTER GOAL\nNo goal. /goal init" });
+      },
+    }),
+  },
+  data: {
+    session: { get: (id) => ({ location: { directory: `/projects/${id}` } }) },
+  },
+  theme: { text: { base: "#ffffff" } },
+  ui: {
+    slot: (claim) => {
+      render = claim.render;
+      return () => {};
+    },
+  },
+});
+const switching = await testRender(
+  () => {
+    const [session, setSession] = createSignal("A");
+    select = setSession;
+    return render({
+      get sessionID() {
+        return session();
+      },
+    });
+  },
+  { width: 42, height: 18 },
+);
+async function frameUntil(pattern) {
+  let frame = "";
+  const deadline = Date.now() + 5000;
+  do {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await switching.renderOnce();
+    frame = switching.captureCharFrame();
+  } while (!pattern.test(frame) && Date.now() < deadline);
+  assert.match(frame, pattern);
+  return frame;
+}
+try {
+  await frameUntil(/Loading/);
+  assert.deepEqual(requests, ["A"]);
+  select("B");
+  await frameUntil(/No goal/);
+  assert(requests.includes("B"), "B must load while A remains pending");
+  delayed({ text: "MASTER GOAL\nWRONG SESSION A" });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  const frame = await frameUntil(/No goal/);
+  assert.doesNotMatch(frame, /WRONG SESSION/);
+  // Returning to A must issue a fresh request, not resurrect its stale response.
+  select("A");
+  await frameUntil(/Loading/);
+  delayed({ text: "MASTER GOAL\nCurrent session A" });
+  await frameUntil(/Current session A/);
+  select("B");
+  const empty = await frameUntil(/No goal/);
+  assert.doesNotMatch(empty, /Current session A/);
+  console.log(
+    "Session switching passed: empty session, pending request, stale response, return navigation.",
+  );
+} finally {
+  switchingCleanup();
+  switching.renderer.destroy();
+}
