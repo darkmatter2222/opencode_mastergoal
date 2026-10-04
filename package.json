@@ -1,6 +1,6 @@
 {
   "name": "@darkmatter2222/opencode-mastergoal",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "OpenCode 2.x goal orchestration with locked deterministic completion contracts",
   "type": "module",
   "license": "MIT",
