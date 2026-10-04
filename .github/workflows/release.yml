@@ -2,12 +2,12 @@ name: Publish Master Goal release
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/release.yml, releases/v0.3.0.md]
+    paths: [.github/workflows/release.yml, releases/v0.4.0.md]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: release-v0.3.0
+  group: release-v0.4.0
   cancel-in-progress: false
 jobs:
   publish:
@@ -17,14 +17,14 @@ jobs:
       contents: write
       actions: read
     env:
-      RELEASE_COMMIT: 5e2a24fea845e53b17ab4eeb233ae3a6a8ea01ec
+      RELEASE_COMMIT: b67f57ca33f5e273945bc580c0402566960ead46
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
       - name: Preserve release notes and require successful CI
         run: |
-          cp releases/v0.3.0.md "$RUNNER_TEMP/release-notes.md"
+          cp releases/v0.4.0.md "$RUNNER_TEMP/release-notes.md"
           gh api "repos/$GH_REPO/actions/runs?head_sha=$RELEASE_COMMIT&status=success" --jq '.workflow_runs[] | select(.name == "Master Goal verification" and .event == "push") | .id' > "$RUNNER_TEMP/verified-runs"
           test -s "$RUNNER_TEMP/verified-runs"
           git fetch origin "$RELEASE_COMMIT"
@@ -36,13 +36,13 @@ jobs:
       - run: npm ci
       - name: Build release artifact
         run: |
-          test "$(node -p 'require("./package.json").version')" = 0.3.0
+          test "$(node -p 'require("./package.json").version')" = 0.4.0
           npm pack
-          sha256sum darkmatter2222-opencode-mastergoal-0.3.0.tgz > SHA256SUMS
-      - name: Publish v0.3.0
+          sha256sum darkmatter2222-opencode-mastergoal-0.4.0.tgz > SHA256SUMS
+      - name: Publish v0.4.0
         run: |
-          if gh release view v0.3.0 > /dev/null 2>&1; then
-            echo 'v0.3.0 is already published; leaving it unchanged.'
+          if gh release view v0.4.0 > /dev/null 2>&1; then
+            echo 'v0.4.0 is already published; leaving it unchanged.'
             exit 0
           fi
-          gh release create v0.3.0 darkmatter2222-opencode-mastergoal-0.3.0.tgz SHA256SUMS --target "$RELEASE_COMMIT" --title 'v0.3.0 — Master Goal for OpenCode 2' --notes-file "$RUNNER_TEMP/release-notes.md" --latest
+          gh release create v0.4.0 darkmatter2222-opencode-mastergoal-0.4.0.tgz SHA256SUMS --target "$RELEASE_COMMIT" --title 'v0.4.0 — Rolling image context window' --notes-file "$RUNNER_TEMP/release-notes.md" --latest
