@@ -73,7 +73,7 @@ test("V2 native command, context, RPC, event telemetry and disposal", async (t) 
   await cmd.execute({ sessionID: "s", prompt: { text: "construct" } });
   assert.match(constructionPrompts[0].text, /MASTER GOAL CONSTRUCTION/);
   assert.equal(constructionPrompts[0].resume, true);
-  const draft = { sessionID: "s", system: [] };
+  const draft = { sessionID: "s", system: [], messages: [] };
   await hooks.compaction(draft);
   assert.match(draft.system[0].text, /MASTER GOAL CONSTRUCTION/);
 
@@ -83,9 +83,34 @@ test("V2 native command, context, RPC, event telemetry and disposal", async (t) 
     delivery: "queue",
   });
   assert.equal(synthetic[0].resume, false);
-  const context = { sessionID: "s", system: [] };
+  const context = { sessionID: "s", system: [], messages: [] };
   await hooks.context(context);
   assert(context.system[0].text.includes("MASTER GOAL"));
+  for (const name of ["context", "compaction", "generate", "title"]) {
+    const messages = Array.from({ length: 100 }, (_, i) => ({
+      role: "user",
+      content: [
+        { type: "text", text: String(i) },
+        { type: "media", media: { kind: "image", mediaType: "image/png" } },
+      ],
+    }));
+    const request = { sessionID: "no-goal", system: [], messages };
+    await hooks[name](request);
+    assert.equal(
+      request.messages
+        .flatMap((m) => m.content)
+        .filter((p) => p.type === "media").length,
+      1,
+    );
+    assert.equal(
+      messages.flatMap((m) => m.content).filter((p) => p.type === "media")
+        .length,
+      100,
+    );
+    assert.equal(request.messages.at(-1).content[0].text, "99");
+  }
+  assert.match((await rpc.read({ sessionID: "s" })).text, /Image window: 1/);
+
   assert.match((await rpc.read({ sessionID: "s" })).text, /ACTIVE/);
   assert.deepEqual(
     tools.map((x) => x.name),

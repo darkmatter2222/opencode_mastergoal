@@ -226,3 +226,35 @@ The [20 sample goals](examples/) include 12 runnable coding exercises and eight 
 `src/contract.ts` defines parsing and locking; `checks.ts` runs verifiers; `engine.ts` owns state transitions; `coordinator.ts` owns continuation admission. `server.ts` integrates the OpenCode 2 API. `tui.ts` renders read-only status. `rpc.ts` is the native sidebar's portable status contract.
 
 See [research](docs/research.md), [architecture](docs/architecture.md), [contract design](docs/contracts.md), and [contributing](CONTRIBUTING.md). MIT licensed.
+
+## Rolling image context window
+
+Master Goal limits raw images sent with each model request. The default is **1**, so screenshot-heavy sessions do not accumulate every previous screenshot in the provider request. The newest images across the whole outgoing conversation survive, including screenshots returned by tools. Text, code, reasoning, other files and tool-call/result pairs remain.
+
+Use OpenCode 2.0.22's native plugin options in `opencode.json` or `opencode.jsonc`. Replace the existing Master Goal entry; do not add a second registration. Keep its existing `package` path (the installer normally uses a `file:///.../.mastergoal-runtime/node_modules/@darkmatter2222/opencode-mastergoal` directory URL):
+
+```json
+{
+  "plugins": [
+    {
+      "package": "@darkmatter2222/opencode-mastergoal",
+      "options": { "imageWindow": 1 }
+    }
+  ]
+}
+```
+
+| Value         | Behavior                                       |
+| ------------- | ---------------------------------------------- |
+| `1` (default) | Latest image only                              |
+| `2`           | Latest two images                              |
+| `4`           | Latest four images                             |
+| `0`           | No raw images, including newly attached images |
+
+Explicit `options.imageWindow` takes precedence over `MASTERGOAL_IMAGE_WINDOW`, then the default `1`. Options require a non-negative safe integer JSON number; the environment variable requires decimal digits. Invalid selected configuration rejects plugin startup with a clear error, never disables the ceiling. Restart OpenCode after changing settings. Installer upgrades preserve plugin options.
+
+Protection applies whenever the plugin is loaded for a location, including sessions without a goal, finite and forever goals, autonomous continuation, compaction, title and session-generation requests. It filters the canonical request before provider serialization and does not delete persisted screenshots. It does not change the model architecture or vLLM's own multimodal limit. Set the window at or below your server's image limit.
+
+The sidebar and `/goal status` show `Image window: N`. When pruning occurs, debug output contains counts only: `[mastergoal] image window: found=100 retained=1 removed=99 limit=1`. No image payloads or URLs are logged. This is runtime configuration, separate from `goal.md` and its contract hash.
+
+The guarantee covers canonical image parts in these OpenCode session request hooks. Another plugin that adds images **after** Master Goal's hook can invalidate it; avoid such conflicting transforms. Opaque provider-managed history, images embedded inside PDFs, and model calls made outside OpenCode's session hooks are not inspected or decoded.
