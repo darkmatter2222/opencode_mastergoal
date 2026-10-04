@@ -26,10 +26,25 @@ const env = {
 const exec = promisify(execFile);
 let constructionCalls = 0;
 let calls = 0;
+const imageRequests = [];
+const imageLimit = Number(process.env.CANARY_IMAGE_WINDOW ?? 1);
+const png =
+  "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGPUCKhgwAaYsIoOWgkAwFgBALQ78QgAAAAASUVORK5CYII=";
+const imageURI = `data:image/png;base64,${png}`;
+const newestURI =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGOcJinHgA0wYRUdtBIApg4A3ZmXOwIAAAAASUVORK5CYII=";
+const newestImages = [];
 const server = createServer(async (req, res) => {
   let body = "";
   for await (const chunk of req) body += chunk;
   const data = JSON.parse(body);
+  if (body.includes("image-history-canary")) {
+    const images = data.messages
+      .flatMap((m) => (Array.isArray(m.content) ? m.content : []))
+      .filter((p) => p.type === "image_url");
+    imageRequests.push(images.length);
+    newestImages.push(images.at(-1)?.image_url?.url);
+  }
   if (body.includes("MASTER GOAL CONSTRUCTION")) constructionCalls++;
   else calls++;
   if (calls >= 3) await writeFile(root + "/accepted.txt", "verified");
@@ -104,13 +119,19 @@ const api = async (method, p, data) => {
 try {
   const config = {
     plugins: [
-      pathToFileURL(
-        process.env.MASTERGOAL_PACKAGE_ROOT
-          ? path.resolve(process.env.MASTERGOAL_PACKAGE_ROOT)
-          : fileURLToPath(new URL("../", import.meta.url)),
-      ).href,
+      {
+        package: pathToFileURL(
+          process.env.MASTERGOAL_PACKAGE_ROOT
+            ? path.resolve(process.env.MASTERGOAL_PACKAGE_ROOT)
+            : fileURLToPath(new URL("../", import.meta.url)),
+        ).href,
+        ...(process.env.CANARY_IMAGE_WINDOW === undefined
+          ? {}
+          : { options: { imageWindow: imageLimit } }),
+      },
     ],
     model: "canary/fake",
+    compaction: { auto: false },
     providers: {
       canary: {
         package: "@ai-sdk/openai-compatible",
@@ -120,7 +141,11 @@ try {
           apiKey: "fake",
         },
         models: {
-          fake: { name: "Fake", limit: { context: 100000, output: 1000 } },
+          fake: {
+            name: "Fake",
+            capabilities: { input: ["text", "image"] },
+            limit: { context: 100000, output: 1000 },
+          },
         },
       },
     },
@@ -191,6 +216,15 @@ try {
     model: { providerID: "canary", id: "fake" },
   });
   const session = created.data ?? created;
+  // Admit 100 separate image-bearing prompts without waking the model.
+  for (let i = 0; i < 100; i++)
+    await api("POST", `/api/session/${session.id}/prompt`, {
+      text: `image-history-canary ${i}`,
+      files: [
+        { uri: i === 99 ? newestURI : imageURI, name: `screen-${i}.png` },
+      ],
+      resume: false,
+    });
   await api("POST", `/api/session/${session.id}/command`, {
     name: "goal",
     text: "start",
@@ -201,12 +235,32 @@ try {
   while (Date.now() < deadline) {
     result = await engine.store(session.id).read();
     if (result?.status === "completed") break;
-    if (result?.status === "blocked") throw Error(JSON.stringify(result));
+    if (result?.status === "blocked")
+      throw Error("Host canary goal blocked; inspect isolated host logs");
     await new Promise((r) => setTimeout(r, 100));
   }
   assert.equal(result?.status, "completed", JSON.stringify({ result, calls }));
   assert(calls >= 3);
   assert(result.usage.output > 0);
+  assert(
+    imageRequests.length > 0,
+    "Image-bearing history reached the provider",
+  );
+  assert(
+    imageRequests.every((n) => n === imageLimit),
+    JSON.stringify({ imageRequests, imageLimit }),
+  );
+  assert(
+    newestImages.every((uri) =>
+      imageLimit === 0 ? uri === undefined : uri === newestURI,
+    ),
+    "Newest screenshot survives provider serialization",
+  );
+  const persisted = JSON.stringify(
+    await api("GET", `/api/experimental/session/${session.id}/export`),
+  );
+  for (let i = 0; i < 100; i++)
+    assert(persisted.includes(`screen-${i}.png`), `Persisted image ${i}`);
   const rpc = await api(
     "POST",
     "/api/rpc/mastergoal.status/read?location[directory]=" +
@@ -225,6 +279,10 @@ try {
         iterations: result.iterations,
         outputTokens: result.usage.output,
         rpc: true,
+        historicalImages: 100,
+        providerImageCounts: imageRequests,
+        persistedImagesPreserved: true,
+        newestImageVerified: true,
       },
       null,
       2,

@@ -19,7 +19,7 @@ export async function initGoal(root: string, file = "goal.md") {
   return `Created ${file}. Write your objective in ${file}, then /goal construct ${file}, then /goal start ${file}.`;
 }
 export const help =
-  "/goal init [path] | construct [path] | start [path] | forever [path] | status | inspect | check | pause | resume | stop | end";
+  "/goal init [path] | construct [path] | start [path] | forever [path] | status | inspect | check | pause | resume | stop | end\nRaw images per model request: imageWindow defaults to 1 (2 = latest two, 0 = no raw images). Configure plugins[].options.imageWindow in opencode.json[c], or MASTERGOAL_IMAGE_WINDOW; restart OpenCode. Session history is preserved.";
 export async function command(
   engine: Engine,
   session: string,

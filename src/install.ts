@@ -73,14 +73,26 @@ export async function install(
       if (config[key] !== undefined && !Array.isArray(config[key]))
         throw new Error(`${key} must be an array in ${file}`);
     if (name === "opencode" && !remove) {
-      const entries = [
-        ...(config.plugin ?? []),
-        ...(config.plugins ?? []),
-      ].filter((x) => !owned(x));
+      const previous = [...(config.plugin ?? []), ...(config.plugins ?? [])];
+      // Preserve native options when replacing an owned registration during upgrades.
+      const options = Object.assign(
+        {},
+        ...previous
+          .filter(owned)
+          .map((entry) =>
+            typeof entry === "object" && entry !== null
+              ? (entry.options ?? {})
+              : {},
+          ),
+      );
+      const entries = previous.filter((x) => !owned(x));
       const unique = [
         ...new Map(entries.map((x) => [JSON.stringify(x), x])).values(),
       ];
-      set("plugins", [...unique, spec]);
+      set("plugins", [
+        ...unique,
+        Object.keys(options).length ? { package: spec, options } : spec,
+      ]);
       if (config.plugin !== undefined) set("plugin", undefined);
     } else {
       for (const key of ["plugin", "plugins"]) {

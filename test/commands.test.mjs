@@ -221,3 +221,30 @@ test("forever command overrides a verified artifact check that passes immediatel
   await command(f.engine, "s", "stop");
   assert.equal((await f.engine.store("s").read()).status, "stopped");
 });
+
+test("installer upgrades preserve native plugin imageWindow options", async (t) => {
+  const f = await fixture(t);
+  await f.write(
+    "opencode.json",
+    JSON.stringify({
+      plugins: [
+        {
+          package: "@darkmatter2222/opencode-mastergoal@0.3.0",
+          options: { imageWindow: 4, future: true },
+        },
+        "other",
+      ],
+    }),
+  );
+  await install(f.root);
+  const once = await readFile(path.join(f.root, "opencode.json"), "utf8");
+  await install(f.root);
+  assert.equal(
+    await readFile(path.join(f.root, "opencode.json"), "utf8"),
+    once,
+  );
+  assert.deepEqual(JSON.parse(once).plugins.at(-1).options, {
+    imageWindow: 4,
+    future: true,
+  });
+});

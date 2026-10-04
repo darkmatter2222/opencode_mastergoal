@@ -1,3 +1,8 @@
+import { applyImageWindow, loadMasterGoalConfig } from "./image-window.js";
+import type {
+  SessionContext,
+  SessionRequest,
+} from "@opencode/plugin/promise/session";
 import { constructionContext } from "./construct.js";
 import { Plugin } from "@opencode/plugin";
 import { realpath } from "node:fs/promises";
@@ -11,6 +16,8 @@ type Sid = Parameters<Plugin.Context["session"]["get"]>[0]["sessionID"];
 export default Plugin.define({
   id: "opencode-mastergoal",
   setup: async (ctx) => {
+    const config = loadMasterGoalConfig(ctx.options);
+    const imageStatus = `Image window: ${config.imageWindow}`;
     const boundRoot = await realpath(ctx.location.directory);
     const engines = new Map<string, Engine>(),
       schedulers = new Map<string, Coordinator>(),
@@ -82,7 +89,9 @@ export default Plugin.define({
             );
             await ctx.session.synthetic({
               sessionID: input.sessionID,
-              text: result.text,
+              text: /^(status|help)$/.test(input.prompt.text.trim())
+                ? `${result.text}\n${imageStatus}`
+                : result.text,
               resume: false,
             });
             if (result.construction)
@@ -102,14 +111,22 @@ export default Plugin.define({
         read: async (input) => {
           const { sessionID } = input as { sessionID: string };
           const { engine } = await get(sessionID);
-          return { text: formatStatus(await engine.store(sessionID).read()) };
+          return {
+            text: `${formatStatus(await engine.store(sessionID).read())}\n${imageStatus}`,
+          };
         },
       }),
     );
-    const inject = async (e: {
-      sessionID: Sid;
-      system: { type: "text"; text: string }[];
-    }) => {
+    const filterImages = async (e: SessionRequest) => {
+      const filtered = applyImageWindow(e.messages, config.imageWindow);
+      e.messages = filtered.messages;
+      if (filtered.removed)
+        console.debug(
+          `[mastergoal] image window: found=${filtered.found} retained=${filtered.retained} removed=${filtered.removed} limit=${filtered.limit}`,
+        );
+    };
+    const inject = async (e: SessionContext) => {
+      await filterImages(e);
       const { engine } = await get(e.sessionID);
       const text =
         (await constructionContext(engine, e.sessionID)) ||
@@ -118,6 +135,8 @@ export default Plugin.define({
     };
     registrations.push(await ctx.session.hook("context", inject));
     registrations.push(await ctx.session.hook("compaction", inject));
+    registrations.push(await ctx.session.hook("generate", filterImages));
+    registrations.push(await ctx.session.hook("title", filterImages));
     registrations.push(
       await ctx.tool.hook("execute.before", async (e) => {
         const { engine } = await get(e.sessionID);
