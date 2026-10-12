@@ -75,11 +75,21 @@ Then run:
 
 OpenCode's current model inspects the project and drafts the acceptance contract and executable verifier using its normal tools and permissions. It checks the baseline, tests incorrect cases, and explains coverage and any missing configuration. Construction instructions persist across compaction. This is a preparation turn, not an autonomous goal run: if the model stops with incomplete construction, ask it to continue or run `/goal construct` again. No success is inferred from its reply.
 
-For an ongoing objective (for example, “take surveys forever”), construction must use `"mode": "forever"`. Start it with `/goal forever goal.md` to enforce non-completion regardless of the generated mode. Its checks report health, not completion. Existing artifacts, a nonempty log, or a newly initialized liveness timer cannot prove that an ongoing objective is finished. A verified goal whose checks already pass can complete immediately; inspect what those checks actually prove before starting.
+For an ongoing objective, write an ordinary Markdown prompt and run:
+
+```text
+/goal forever my-prompt.md
+```
+
+No `/goal init`, `/goal construct`, compiled contract, or verifier is needed. MasterGoal saves the file contents and sends that exact prompt again after each finished model turn (with a one-second scheduling delay). It waits for the current turn before sending another. Completion claims and completed todos never end the loop. Any embedded contract fences are treated as prompt text, not executed as checks or used as budgets.
+
+Use `/goal pause`, `/goal resume`, and `/goal stop` (or `/goal end`) to control the loop. The saved prompt survives compaction and restart; after restarting OpenCode, use `/goal resume`. Edits to the source file do not change an existing loop: stop and start it again to load the new contents. The file must be nonempty, inside the project, and at most 256 KB.
+
+For advanced contract-based health checks, `/goal start` still accepts a constructed `"mode": "forever"` contract. Those checks report health and never completion. A finite verified goal whose checks already pass can complete immediately; inspect what those checks prove before starting.
 
 Inspect the proposed criteria, then run `/goal start`. Starting validates the contract and locks its bytes and verifier dependencies; construction never starts a run automatically. To change a live goal, `/goal stop` first. Custom paths work with all three commands, for example `/goal init goals/release.md` (create the parent directory first), `/goal construct goals/release.md`, `/goal start goals/release.md`.
 
-Deterministic checks are mandatory. When subjective criteria require model review, construction can also draft a separate reviewer script. It must use an available configured review service; missing credentials/configuration leave verification failing and are reported to you. Review can veto success but cannot bypass deterministic checks. Generated checks are drafts of your intent, not a mathematical guarantee that every natural-language requirement has been captured.
+For finite goals, deterministic checks are mandatory. When subjective criteria require model review, construction can also draft a separate reviewer script. It must use an available configured review service; missing credentials/configuration leave verification failing and are reported to you. Review can veto success but cannot bypass deterministic checks. Generated checks are drafts of your intent, not a mathematical guarantee that every natural-language requirement has been captured.
 
 For example, construction might produce this contract and verifier:
 
@@ -132,7 +142,7 @@ The plugin executes checks itself when the host finishes working. Failing eviden
 | `/goal init [path]`         | Create the Markdown and script templates; default `goal.md`         |
 | `/goal construct [path]`    | Ask OpenCode to build the contract and verifier from your objective |
 | `/goal start [path]`        | Validate and lock a new goal; custom paths can contain spaces       |
-| `/goal forever [path]`      | Lock a goal with completion disabled                                |
+| `/goal forever [path]`      | Repeat a plain Markdown prompt; no construction required            |
 | `/goal status`              | Show verified progress and usage                                    |
 | `/goal inspect`             | Show the full contract, evidence, and recent history                |
 | `/goal check`               | Run a fresh verification on an active goal                          |

@@ -80,3 +80,9 @@ Native `plugins: [{ package, options: { imageWindow: 1 } }]` supplies `ctx.optio
 Source inspection: upstream v2 commit `f74512bfe0ad5264acd58ab6d7548eae427f75f5` (package version 2.0.22), `packages/core/src/session/model-request.ts`, `runner/to-llm-message.ts`, `packages/plugin/src/promise/session.ts`, `packages/schema/src/config/plugin.ts`, and the installed 2.0.22 AI media/tool schemas and protocol lowering. No dependency upgrade was required.
 
 This is request-context filtering, not persistent-history cleanup. No universal final-hook priority exists in this API: later third-party hooks must not reinsert media. Opaque provider-side history and external model calls lie outside this canonical raw-image boundary.
+
+## Plain Markdown forever loops
+
+`/goal forever [path]` snapshots a nonempty Markdown file directly, with `promptLoop: true` in persisted goal state. It does not parse a contract or load scripts, pins, reviews, or budgets from the prompt. The internal lifecycle is forever with no checks and a one-second cadence. The coordinator sends the saved Markdown verbatim once per completed turn; duplicate idle events cannot admit overlapping prompts. Context and compaction hooks retain the task and loop instructions. Source-file changes do not invalidate the saved prompt. Explicit stop/start is required to adopt edits. Pause, stop, error handling, restart recovery, accounting, and session isolation use the existing lifecycle.
+
+`/goal start` retains the locked contract flow, including deterministic completion for verified goals and health checks for existing forever contracts. Old persisted runs retain their behavior.

@@ -29,6 +29,7 @@ export interface Contract {
   };
 }
 export interface LockedGoal {
+  promptLoop?: true;
   file: string;
   markdown: string;
   digest: string;
@@ -157,8 +158,28 @@ export async function lockGoal(
 ): Promise<LockedGoal> {
   const resolved = await within(root, file),
     markdown = await readFile(resolved, "utf8");
+  if (forever) {
+    if (!markdown.trim()) throw new Error("Forever prompt must not be empty");
+    if (Buffer.byteLength(markdown) > 256_000)
+      throw new Error("Forever prompt exceeds 256 KB");
+    // Explicit forever is a saved prompt, not a compiled acceptance contract.
+    // Embedded fences are task text; never run their scripts or adopt their limits.
+    return {
+      promptLoop: true,
+      file: resolved,
+      markdown,
+      digest: digest(markdown),
+      contract: {
+        version: 1,
+        title: path.basename(resolved),
+        mode: "forever",
+        checks: [],
+        intervalMs: 1000,
+      },
+      pins: {},
+    };
+  }
   const contract = parseGoal(markdown);
-  if (forever) contract.mode = "forever";
   const pins: Record<string, string> = {};
   for (const c of [
     ...contract.checks,
@@ -171,6 +192,8 @@ export async function lockGoal(
   return { file: resolved, markdown, digest: digest(markdown), contract, pins };
 }
 export async function assertIntegrity(root: string, goal: LockedGoal) {
+  // A prompt loop replays its persisted snapshot, even if the source is edited.
+  if (goal.promptLoop) return;
   if (digest(await readFile(await within(root, goal.file))) !== goal.digest)
     throw new Error(
       "goal.md changed after start; stop and start a new run to approve the new contract",
