@@ -1,5 +1,11 @@
 # Master Goal
 
+[![CI](https://github.com/darkmatter2222/opencode_mastergoal/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/darkmatter2222/opencode_mastergoal/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![OpenCode-2.x](https://img.shields.io/badge/OpenCode-2.x-5C67F2)](https://github.com/darkmatter2222/opencode_mastergoal#quick-install)
+[![GitHub stars](https://img.shields.io/github/stars/darkmatter2222/opencode_mastergoal?style=social)](https://github.com/darkmatter2222/opencode_mastergoal/stargazers)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?logo=buymeacoffee&logoColor=000)](https://buymeacoffee.com/j6oiubzfnh)
+
 **File-first goal orchestration for OpenCode 2.x. The model does the work. The host checks the result.**
 
 Master Goal is an original implementation, built from scratch. It is not a fork of OpenCode Goals. It separates the agent's reasoning from the authority to declare completion.
@@ -7,6 +13,19 @@ Master Goal is an original implementation, built from scratch. It is not a fork 
 A run locks a `goal.md` contract and the verifier scripts it references. Every deterministic check must pass before the run can complete. An optional independent reviewer can veto success. Model prose, completion promises, completed todos, and arguments that a goal is impossible cannot mark a run complete.
 
 Explicit **forever mode** has no success transition and no default iteration, token, cost, or elapsed-time cap. `/goal stop` or `/goal end` stops it. Host shutdown, permission waits, errors, and unavailable providers can interrupt execution; none count as success.
+
+## Partner repositories: environments, agents and persistent goals
+
+These three projects form an Android automation stack around **OpenCode 2.x**. Each owns a different part of the workflow and can be installed independently.
+
+| Repository | Responsibility | Start here |
+|---|---|---|
+| [AndroidCtl](https://github.com/darkmatter2222/AndroidCtl) (formerly `virtual_android`) | Run persistent virtual Android environments: emulator/KVM, lifecycle, fleet health and stable ADB endpoints | [Fleet installation and operations](https://github.com/darkmatter2222/AndroidCtl#four-device-fleet-install-upgrade-and-run) |
+| [android_automation](https://github.com/darkmatter2222/android_automation) | Observe and operate Android UIs through guarded MCP tools; coordinate device workers, specialists and benchmark evidence | [Agent hierarchy and responsibilities](https://github.com/darkmatter2222/android_automation#how-the-agent-hierarchy-works) |
+| [MasterGoal](https://github.com/darkmatter2222/opencode_mastergoal) | Keep an OpenCode goal progressing across turns, verify finite outcomes and support ongoing forever automations | [Install](https://github.com/darkmatter2222/opencode_mastergoal#quick-install) · [Android forever workflow](https://github.com/darkmatter2222/opencode_mastergoal#android-automation-and-forever-goals) |
+
+The automation repository currently requires GitHub access. AndroidCtl itself is a standalone Python/systemd host manager; OpenCode 2.x is the agent backbone above it, not a prerequisite for booting an emulator. MasterGoal is useful beyond Android, and the harness can also control an existing physical or virtual device.
+
 
 ## Quick install
 
@@ -56,6 +75,53 @@ node dist/cli.js install --local /absolute/path/to/project --link
 ```
 
 `--link` registers this checkout directly; keep it in place and use `--link` for uninstall too. For remote OpenCode 2 servers, register the package on the server; OpenCode obtains the plugin list for the client, and the sidebar reads state through RPC. File-based package references must be accessible to the client; use a shared package installation when client and server filesystems differ. Tested host versions and evidence are in [validation](docs/validation.md).
+
+## Android automation and forever goals
+
+MasterGoal is the persistent-goal layer for [android_automation](https://github.com/darkmatter2222/android_automation), whose agent team operates devices supplied by [AndroidCtl](https://github.com/darkmatter2222/AndroidCtl) or another ADB-accessible Android environment. Run the plugin in the automation project so the goal, agent definitions and MCP configuration belong to the same workflow. See the partner's [agent hierarchy](https://github.com/darkmatter2222/android_automation#how-the-agent-hierarchy-works), [handoff rules](https://github.com/darkmatter2222/android_automation#communication-and-ownership-contracts) and [setup instructions](https://github.com/darkmatter2222/android_automation#install-on-your-automation-host).
+
+```mermaid
+flowchart TD
+    F["Goal file: objective and acceptance"] --> M["MasterGoal: locked contract and continuation"]
+    M --> C["OpenCode 2.x: Android coordinator"]
+    C --> S["Benchmark setup and blind worker"]
+    C --> W["General Android controller"]
+    S --> H["Android MCP and explicit ADB serial"]
+    W --> H
+    H --> D["AndroidCtl virtual device or existing device"]
+    S -. "exported outcome evidence" .-> V["Host verification"]
+    W -. "live outcome checks" .-> V
+    V --> M
+```
+
+Use a **finite verified goal** for a bounded outcome such as completing one benchmark and exporting its report. A benchmark completion verifier should check run identity and completion; a quality target additionally needs explicit score/coverage criteria. Use **forever mode** for intentionally ongoing work such as repeatedly checking an authorized app workflow. Passing a health check must not complete an ongoing goal.
+
+For the contract-based workflow currently on this branch, prepare the goal before starting forever mode. From an installed automation checkout, select `android-coordinator` in OpenCode and run:
+
+```text
+/goal init goals/android-monitor.md
+```
+
+Create the `goals/` directory first. Edit the generated Markdown with the exact ADB serial, recurring unit of work, allowed actions, expected postconditions, duplicate-prevention rules and bounded recovery policy. Then:
+
+```text
+/goal construct goals/android-monitor.md
+/goal forever goals/android-monitor.md
+/goal status
+```
+
+Inspect the constructed contract before starting. This branch parses a `mastergoal` contract even with `/goal forever`; do not assume that an unconstructed Markdown prompt is accepted by every installed version. Forever mode disables completion; it does not remove device ownership rules, renew exhausted worker retry budgets or authorize resetting a benchmark. For a recurring benchmark objective, explicitly authorize new runs and require exporting/archiving each completed run before starting the next.
+
+| Layer | Owns | Does not establish |
+|---|---|---|
+| MasterGoal | Outer continuation, locked contract, verification, pause/stop and run state | That an input reached the intended UI target or an emulator is healthy |
+| Automation coordinator/setup | Bounded delegation, one controller per serial, checkpoints and benchmark lifecycle | Permission to override a failing verifier or reset counters through delegation |
+| Device worker and MCP harness | Grounded observe/action/verify steps, delivery receipts and action guards | Goal completion merely because a tap was delivered |
+| AndroidCtl | VM lifecycle, saved ADB ports, systemd services and health reporting | Completion of an app workflow or model navigation proficiency |
+
+Use `/goal pause` to pause automatic continuation, `/goal resume` to resume an eligible existing run, and `/goal stop` or `/goal end` to stop it. Interrupt and join any in-flight model/tool work and child workers before giving the device to another controller; goal stop is not an emulator shutdown command. Host shutdown interrupts forever operation, and host restart requires explicit resume. One scheduler owns the OpenCode session: do not install a competing goal/continuation loop alongside MasterGoal.
+
+The default image window of **1** fits the harness's single-image perception approach. It limits raw images in outgoing model requests, not stored screenshots or evidence. Keep checkpoints, reports and diagnostics in the automation project's ignored runtime directories. Children and external review have separate usage accounting, as described below.
 
 ## First goal
 
@@ -258,3 +324,11 @@ Protection applies whenever the plugin is loaded for a location, including sessi
 The sidebar and `/goal status` show `Image window: N`. When pruning occurs, debug output contains counts only: `[mastergoal] image window: found=100 retained=1 removed=99 limit=1`. No image payloads or URLs are logged. This is runtime configuration, separate from `goal.md` and its contract hash.
 
 The guarantee covers canonical image parts in these OpenCode session request hooks. Another plugin that adds images **after** Master Goal's hook can invalidate it; avoid such conflicting transforms. Opaque provider-managed history, images embedded inside PDFs, and model calls made outside OpenCode's session hooks are not inspected or decoded.
+
+## Support the partner projects
+
+If these tools help you, **star the repositories you use**: [AndroidCtl](https://github.com/darkmatter2222/AndroidCtl), [android_automation](https://github.com/darkmatter2222/android_automation) and [MasterGoal](https://github.com/darkmatter2222/opencode_mastergoal). Stars help other builders discover the environment, automation and goal layers together.
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-Support_development-FFDD00?logo=buymeacoffee&logoColor=000)](https://buymeacoffee.com/j6oiubzfnh)
+
+Bug reports, reproducible evidence and documentation improvements are welcome too.
