@@ -207,6 +207,8 @@ test("V2 status command cannot cancel a pending continuation", async (t) => {
   t.after(dispose);
   await cmd.execute({ sessionID: "s", prompt: { text: "start" } });
   await cmd.execute({ sessionID: "s", prompt: { text: "status" } });
-  await wait(400);
+  // Wait for observable delivery, not a fixed 150 ms of runner headroom.
+  const deadline = Date.now() + 5000;
+  while (prompts === 0 && Date.now() < deadline) await wait(25);
   assert.equal(prompts, 1);
 });
