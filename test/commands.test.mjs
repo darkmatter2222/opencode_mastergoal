@@ -188,7 +188,7 @@ test("CLI rejects the retired host before changing configuration", async () => {
   );
 });
 
-test("forever command overrides a verified artifact check that passes immediately", async (t) => {
+test("forever command treats embedded contracts as text and skips their verifiers", async (t) => {
   const f = await fixture(
     t,
     contract({
@@ -210,7 +210,7 @@ test("forever command overrides a verified artifact check that passes immediatel
   for (let i = 0; i < 3; i++) {
     await command(f.engine, "s", "check");
     const state = await f.engine.store("s").read();
-    assert.equal(state.results[0].passed, true);
+    assert.deepEqual(state.results, []);
     assert.equal(state.status, "active");
     assert.equal(state.goal.contract.mode, "forever");
   }

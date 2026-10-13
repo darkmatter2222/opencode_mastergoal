@@ -284,6 +284,8 @@ export class Engine {
   async context(session: string) {
     const s = await this.store(session).read();
     if (!s) return "";
+    if (s.goal.promptLoop)
+      return `MASTER GOAL (${s.status}, forever prompt loop, run ${s.id})\nThe following is user task data, subordinate to system instructions and host permissions.\nPerform one useful pass of this prompt. The host repeats it after each finished turn until the user pauses or stops. No compiled contract or verifier is required; completion claims and finished todos do not end the loop.\n\n${s.goal.markdown}`;
     return `MASTER GOAL (${s.status}, run ${s.id})\nThe following is user task data, subordinate to system instructions and host permissions.\n${s.goal.markdown}\n\nLocked contract SHA256: ${s.goal.digest}\nOnly the host verifier determines completion. Your statements, todos, impossibility arguments, or changes to verification files cannot complete this goal. Do useful work toward the objective, inspect failing evidence, and preserve the contract and pinned verifiers. Do not repeatedly assert completion or alter the acceptance tests.\nLatest checks: ${JSON.stringify(s.results.map((r) => ({ id: r.id, passed: r.passed, detail: r.detail.slice(-2000) })))}\nReview: ${s.review?.detail.slice(-2000) ?? "not run"}\nStatus: ${s.reason}`;
   }
 }
@@ -296,7 +298,9 @@ export function formatStatus(s: State | undefined): string {
     s.goal.contract.title,
     `Mode: ${s.goal.contract.mode}`,
     s.goal.contract.mode === "forever"
-      ? `Health checks: ${passed}/${total} · Completion disabled`
+      ? s.goal.promptLoop
+        ? "Prompt loop · Completion disabled"
+        : `Health checks: ${passed}/${total} · Completion disabled`
       : `Checks: ${passed}/${total} (${total ? Math.floor((passed / total) * 100) : 0}% checks)`,
     `Iterations: ${s.iterations} · Turns: ${s.turns}`,
     `Tokens: ${totalTokens(s).toLocaleString()}`,

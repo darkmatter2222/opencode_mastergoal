@@ -79,7 +79,10 @@ export class Coordinator {
       this.awaiting.add(session);
       this.observed.delete(session);
       try {
-        await this.host.prompt(session, context);
+        await this.host.prompt(
+          session,
+          latest.goal.promptLoop ? latest.goal.markdown : context,
+        );
       } catch (e) {
         this.awaiting.delete(session);
         await this.engine.interrupt(
